@@ -12,9 +12,14 @@
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
     @mousedown="handleMouseDown"
+    @touchstart="handleTouchStart"
+    @touchend="handleTouchEnd"
+    @touchmove="handleTouchMove"
+    @keydown="handleKeyDown"
     :tabindex="0"
     :aria-label="`Rumour: ${rumour.title}`"
     :aria-expanded="rumour.isHovered"
+    role="article"
   >
     <!-- Header with pin icon and title -->
     <div class="marker-header">
@@ -32,7 +37,13 @@
 
     <!-- Description (shown on hover or mobile tap) -->
     <transition name="expand">
-      <div v-if="rumour.isHovered" class="marker-description">
+      <div 
+        v-if="rumour.isHovered" 
+        class="marker-description"
+        :id="`description-${rumour.id}`"
+        role="region"
+        :aria-label="`Description for ${rumour.title}`"
+      >
         {{ rumour.description }}
       </div>
     </transition>
@@ -71,6 +82,7 @@ const markerStyle = computed(() => {
 })
 
 let hoverTimeout = null
+let longPressTimeout = null
 
 const handleMouseEnter = () => {
   // Delay expansion by 300ms
@@ -101,6 +113,79 @@ const handleMouseDown = (e) => {
     emit('drag-start', { rumour: props.rumour, event: e })
   }
 }
+
+// Touch handling
+const handleTouchStart = (e) => {
+  // For pinned rumours, implement long-press to unpin (mobile UX)
+  if (props.rumour.isPinned) {
+    longPressTimeout = setTimeout(() => {
+      // Toggle expansion on tap (mobile behavior)
+      props.rumour.isHovered = !props.rumour.isHovered
+      longPressTimeout = null
+    }, 150)
+  } else {
+    // For unpinned rumours, start drag immediately
+    emit('drag-start', { rumour: props.rumour, event: e })
+  }
+}
+
+const handleTouchEnd = (e) => {
+  if (longPressTimeout) {
+    clearTimeout(longPressTimeout)
+    longPressTimeout = null
+  }
+}
+
+const handleTouchMove = (e) => {
+  // Cancel long-press if user starts moving
+  if (longPressTimeout) {
+    clearTimeout(longPressTimeout)
+    longPressTimeout = null
+  }
+}
+
+// Keyboard navigation
+const handleKeyDown = (e) => {
+  switch (e.key) {
+    case 'Enter':
+    case ' ':
+      // Toggle pin state
+      e.preventDefault()
+      togglePin()
+      break
+    case 'Escape':
+      // Re-pin if unpinned
+      if (!props.rumour.isPinned) {
+        props.rumour.isPinned = true
+      }
+      break
+    case 'ArrowUp':
+    case 'ArrowDown':
+    case 'ArrowLeft':
+    case 'ArrowRight':
+      // Move unpinned rumours with arrow keys
+      if (!props.rumour.isPinned) {
+        e.preventDefault()
+        const step = 10 // pixels in map coordinates
+        
+        switch (e.key) {
+          case 'ArrowUp':
+            props.rumour.y = Math.max(0, props.rumour.y - step)
+            break
+          case 'ArrowDown':
+            props.rumour.y = Math.min(3600, props.rumour.y + step)
+            break
+          case 'ArrowLeft':
+            props.rumour.x = Math.max(0, props.rumour.x - step)
+            break
+          case 'ArrowRight':
+            props.rumour.x = Math.min(6500, props.rumour.x + step)
+            break
+        }
+      }
+      break
+  }
+}
 </script>
 
 <style scoped>
@@ -115,6 +200,7 @@ const handleMouseDown = (e) => {
   transition: all 0.2s ease-out;
   transform: translate(-50%, -50%);
   pointer-events: auto;
+  touch-action: none; /* Prevent default touch behaviors */
 }
 
 .rumour-marker:focus {
