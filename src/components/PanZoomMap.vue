@@ -56,11 +56,15 @@
     <div class="info-overlay">
       <span class="Label Label--primary">Zoom: {{ Math.round(scale * 100) }}%</span>
     </div>
+
+    <!-- Rumour overlay -->
+    <RumourOverlay :map-transform="mapTransform" />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import RumourOverlay from './RumourOverlay.vue'
 
 const props = defineProps({
   imageUrl: {
@@ -100,6 +104,13 @@ const contentStyle = computed(() => ({
   transformOrigin: '0 0',
   cursor: isPanning.value ? 'grabbing' : 'grab',
   transition: isPanning.value ? 'none' : 'transform 0.1s ease-out'
+}))
+
+// Expose map transform for rumour positioning
+const mapTransform = computed(() => ({
+  scale: scale.value,
+  translateX: translateX.value,
+  translateY: translateY.value
 }))
 
 const onImageLoad = () => {
