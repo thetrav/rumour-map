@@ -292,15 +292,17 @@ onUnmounted(() => {
 }
 
 .pan-zoom-content {
-  width: 100%;
-  height: 100%;
   position: absolute;
   top: 0;
   left: 0;
+  transform-origin: 0 0;
 }
 
 .map-image {
   display: block;
+  width: auto;
+  height: auto;
+  max-width: none;
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;

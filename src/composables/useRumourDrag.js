@@ -29,6 +29,9 @@ export function useRumourDrag(mapTransform) {
     const startY = clientY
     const initialMapX = rumour.x
     const initialMapY = rumour.y
+    
+    // Capture the current scale at drag start to use consistently during the drag
+    const dragScale = mapTransform.scale
 
     /**
      * Handle drag movement
@@ -38,8 +41,9 @@ export function useRumourDrag(mapTransform) {
       const moveClientY = e.touches ? e.touches[0].clientY : e.clientY
 
       // Calculate delta in screen space, then convert to map space
-      const dx = (moveClientX - startX) / mapTransform.scale
-      const dy = (moveClientY - startY) / mapTransform.scale
+      // The delta needs to be divided by the scale to convert screen pixels to map coordinates
+      const dx = (moveClientX - startX) / dragScale
+      const dy = (moveClientY - startY) / dragScale
 
       // Update position, clamping to map bounds (0-6500, 0-3600)
       rumour.x = Math.max(0, Math.min(6500, initialMapX + dx))
