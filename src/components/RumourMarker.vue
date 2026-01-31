@@ -51,7 +51,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
   rumour: {
@@ -81,25 +81,32 @@ const markerStyle = computed(() => {
   }
 })
 
-let hoverTimeout = null
-let longPressTimeout = null
+const hoverTimeout = ref(null)
+const collapseTimeout = ref(null)
+const longPressTimeout = ref(null)
 
 const handleMouseEnter = () => {
+  // Clear any pending collapse
+  if (collapseTimeout.value) {
+    clearTimeout(collapseTimeout.value)
+    collapseTimeout.value = null
+  }
+  
   // Delay expansion by 300ms
-  hoverTimeout = setTimeout(() => {
+  hoverTimeout.value = setTimeout(() => {
     props.rumour.isHovered = true
   }, 300)
 }
 
 const handleMouseLeave = () => {
   // Clear timeout if mouse leaves before expansion
-  if (hoverTimeout) {
-    clearTimeout(hoverTimeout)
-    hoverTimeout = null
+  if (hoverTimeout.value) {
+    clearTimeout(hoverTimeout.value)
+    hoverTimeout.value = null
   }
   
   // Collapse after 200ms delay
-  setTimeout(() => {
+  collapseTimeout.value = setTimeout(() => {
     props.rumour.isHovered = false
   }, 200)
 }
@@ -118,10 +125,10 @@ const handleMouseDown = (e) => {
 const handleTouchStart = (e) => {
   // For pinned rumours, implement long-press to unpin (mobile UX)
   if (props.rumour.isPinned) {
-    longPressTimeout = setTimeout(() => {
+    longPressTimeout.value = setTimeout(() => {
       // Toggle expansion on tap (mobile behavior)
       props.rumour.isHovered = !props.rumour.isHovered
-      longPressTimeout = null
+      longPressTimeout.value = null
     }, 150)
   } else {
     // For unpinned rumours, start drag immediately
@@ -130,17 +137,17 @@ const handleTouchStart = (e) => {
 }
 
 const handleTouchEnd = (e) => {
-  if (longPressTimeout) {
-    clearTimeout(longPressTimeout)
-    longPressTimeout = null
+  if (longPressTimeout.value) {
+    clearTimeout(longPressTimeout.value)
+    longPressTimeout.value = null
   }
 }
 
 const handleTouchMove = (e) => {
   // Cancel long-press if user starts moving
-  if (longPressTimeout) {
-    clearTimeout(longPressTimeout)
-    longPressTimeout = null
+  if (longPressTimeout.value) {
+    clearTimeout(longPressTimeout.value)
+    longPressTimeout.value = null
   }
 }
 
@@ -186,6 +193,19 @@ const handleKeyDown = (e) => {
       break
   }
 }
+
+// Cleanup on unmount
+onBeforeUnmount(() => {
+  if (hoverTimeout.value) {
+    clearTimeout(hoverTimeout.value)
+  }
+  if (collapseTimeout.value) {
+    clearTimeout(collapseTimeout.value)
+  }
+  if (longPressTimeout.value) {
+    clearTimeout(longPressTimeout.value)
+  }
+})
 </script>
 
 <style scoped>

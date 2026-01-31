@@ -110,7 +110,6 @@ R3|2100|2200|Trade Route Closed|Merchant caravans report bandits along the easte
 
 ### Constraints
 
-- Maximum 500 rumours per file (for performance)
 - Coordinates outside bounds will be clamped to edges
 - Malformed lines are skipped with console warnings
 - Pipe characters (`|`) within content are not allowed

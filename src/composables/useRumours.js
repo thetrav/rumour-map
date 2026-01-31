@@ -69,7 +69,7 @@ export function useRumours() {
 
     try {
       // Use BASE_URL to respect Vite's base path configuration
-      const baseUrl = import.meta.env.BASE_URL || '/'
+      const baseUrl = import.meta.env.BASE_URL
       const response = await fetch(`${baseUrl}rumours.psv`)
       
       if (!response.ok) {
