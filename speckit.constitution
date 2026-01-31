@@ -1,0 +1,175 @@
+# Rumour Map - Project Constitution
+
+## Purpose
+This document establishes the foundational principles and standards for the Rumour Map project - a single-page Vue.js application for viewing high-resolution maps with pan and zoom capabilities.
+
+---
+
+## 1. Code Quality Principles
+
+### 1.1 Simplicity First
+- Prioritize simple, readable solutions over complex abstractions
+- Avoid premature optimization; optimize only when performance issues are identified
+- Each component should have a single, clear responsibility
+
+### 1.2 Composition API Standards
+- Use Vue 3 Composition API consistently across all components
+- Prefer `<script setup>` syntax for cleaner, more concise code
+- Extract reusable logic into composables with clear naming (e.g., `useMapControls`, `useZoomPan`)
+
+### 1.3 Code Style
+- Use consistent naming conventions:
+  - Components: PascalCase (e.g., `MapViewer.vue`)
+  - Composables: camelCase with `use` prefix (e.g., `useMapTransform.js`)
+  - Utilities: camelCase (e.g., `clampValue.js`)
+  - Constants: UPPER_SNAKE_CASE (e.g., `MAX_ZOOM_LEVEL`)
+- Limit component files to 300 lines; refactor larger components into smaller, focused ones
+- Use meaningful variable names that describe intent, not implementation
+
+### 1.4 Dependency Management
+- Keep dependencies minimal and purposeful
+- Prefer native browser APIs over external libraries when practical
+- Document the reason for each dependency in package.json comments or README
+
+---
+
+## 2. Testing Standards
+
+### 2.1 Coverage Philosophy
+- Focus on testing critical user interactions and transformations
+- Prioritize integration tests that verify real user scenarios over isolated unit tests
+- For this single-page application, test:
+  - Pan and zoom functionality accuracy
+  - Touch and mouse input handling
+  - Boundary conditions (min/max zoom, viewport limits)
+  - Responsive behavior across viewport sizes
+
+### 2.2 Testing Approach
+- When tests are added, use Vitest (Vite-native testing)
+- Test files should be colocated with components (e.g., `MapViewer.spec.js`)
+- Use descriptive test names that explain the expected behavior
+- Mock external dependencies but test DOM interactions with real elements
+
+### 2.3 Manual Testing Requirements
+- Test on both desktop and mobile devices before each release
+- Verify touch gestures (pinch-to-zoom, pan) on actual touch devices
+- Test in Chrome, Firefox, and Safari (minimum browser support)
+- Validate performance with the actual high-resolution image (6500 x 3600)
+
+---
+
+## 3. User Experience Consistency
+
+### 3.1 Interaction Patterns
+- Map controls must be intuitive and discoverable:
+  - Visual feedback on hover/touch for all interactive elements
+  - Smooth, predictable animations (prefer CSS transforms for performance)
+  - Consistent behavior between mouse and touch interactions
+- Maintain 60fps during pan and zoom operations
+- All interactive elements should have minimum 44x44px touch targets (WCAG 2.5.5)
+
+### 3.2 Visual Design
+- Use GitHub Primer CSS as the design foundation for UI components
+- Maintain visual hierarchy: controls should be prominent but not obstructive
+- Use consistent spacing via Tailwind's spacing scale
+- Dark mode support is optional but if added, must be system-preference aware
+
+### 3.3 Responsive Design
+- Application must work seamlessly from 320px (mobile) to 4K displays
+- Controls should adapt to viewport size (e.g., smaller buttons on mobile)
+- Map should fill viewport efficiently without excessive whitespace
+- Consider orientation changes on mobile devices
+
+### 3.4 Accessibility
+- All controls must be keyboard accessible
+- Use semantic HTML elements (buttons, not divs with click handlers)
+- Provide appropriate ARIA labels for icon-only controls
+- Ensure sufficient color contrast (WCAG AA minimum)
+- Support browser zoom up to 200%
+
+---
+
+## 4. Performance Requirements
+
+### 4.1 Load Time Targets
+- Initial page load: < 2 seconds on 3G connection
+- First meaningful paint: < 1 second
+- Bundle size: Keep JavaScript bundle under 200KB (gzipped)
+- Optimize map image delivery (consider progressive loading for large images)
+
+### 4.2 Runtime Performance
+- Maintain 60fps during all pan and zoom operations
+- Use CSS transforms (translate, scale) instead of position manipulation
+- Debounce/throttle expensive operations (e.g., resize handlers)
+- Avoid layout thrashing: batch DOM reads and writes
+
+### 4.3 Memory Management
+- No memory leaks: clean up event listeners in component lifecycle
+- Limit DOM nodes: avoid rendering unnecessary elements
+- Monitor heap usage during extended pan/zoom sessions
+
+### 4.4 Asset Optimization
+- Compress images appropriately (consider WebP with fallbacks)
+- Lazy-load non-critical assets
+- Leverage browser caching with appropriate cache headers
+- Use Vite's built-in code splitting for route-based chunks (if routes are added)
+
+---
+
+## 5. Build and Deployment
+
+### 5.1 Build Configuration
+- Production builds must be minified and optimized
+- Source maps should be generated for debugging but not deployed publicly
+- Use environment variables for configuration (never commit secrets)
+
+### 5.2 Browser Support
+- Modern browsers (last 2 versions):
+  - Chrome/Edge (Chromium)
+  - Firefox
+  - Safari
+- Graceful degradation for older browsers (display message if critical features unavailable)
+- No IE11 support required
+
+---
+
+## 6. Documentation
+
+### 6.1 Code Documentation
+- Document non-obvious logic with inline comments
+- Each composable should have a JSDoc header explaining purpose and parameters
+- README must remain current with feature changes
+
+### 6.2 Component Documentation
+- Complex components should include usage examples in comments
+- Document expected props, events, and slots in component headers
+- Note any performance considerations or limitations
+
+---
+
+## 7. Git and Version Control
+
+### 7.1 Commit Standards
+- Use clear, descriptive commit messages
+- Prefix commits with type: `feat:`, `fix:`, `refactor:`, `perf:`, `docs:`
+- Keep commits atomic (one logical change per commit)
+
+### 7.2 Branch Strategy
+- Main branch should always be deployable
+- Use feature branches for new functionality
+- Delete branches after merging
+
+---
+
+## 8. Technology Standards
+- Uses Vue.JS
+- Use tailwind styling.
+
+
+---
+
+## 9. Evolution of Standards
+
+This constitution should be reviewed and updated as the project grows. Principles may be refined, but the core values of simplicity, performance, and user experience should remain constant.
+
+**Last Updated:** 2026-01-31
