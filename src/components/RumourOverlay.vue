@@ -1,20 +1,5 @@
 <template>
   <div class="rumour-overlay">
-    <!-- Loading state -->
-    <div v-if="isLoading" class="overlay-message">
-      <span class="Label Label--primary">Loading rumours...</span>
-    </div>
-
-    <!-- Error state -->
-    <div v-else-if="error" class="overlay-message error">
-      <span class="Label Label--danger">Failed to load rumours: {{ error }}</span>
-    </div>
-
-    <!-- Empty state -->
-    <div v-else-if="rumours.length === 0" class="overlay-message">
-      <span class="Label Label--secondary">No rumours available</span>
-    </div>
-
     <!-- Rumour markers -->
     <RumourMarker
       v-for="rumour in visibleRumours"
@@ -28,38 +13,34 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useRumours } from '../composables/useRumours'
-import { useRumourDrag } from '../composables/useRumourDrag'
-import RumourMarker from './RumourMarker.vue'
+import { useRumourDrag } from "../composables/useRumourDrag";
+import RumourMarker from "./RumourMarker.vue";
 
 const props = defineProps({
+  rumours: {
+    type: Array,
+    required: true,
+  },
   mapTransform: {
     type: Object,
     required: true,
     default: () => ({
       scale: 1,
       translateX: 0,
-      translateY: 0
-    })
-  }
-})
+      translateY: 0,
+    }),
+  },
+});
 
-const { rumours, isLoading, error } = useRumours()
-const { startDrag } = useRumourDrag(props.mapTransform)
-
-// Filter out hidden rumours
-const visibleRumours = computed(() => {
-  return rumours.value.filter(rumour => !rumour.isHidden)
-})
+const { startDrag } = useRumourDrag(props.mapTransform);
 
 const handleTogglePin = (rumour) => {
-  rumour.isPinned = !rumour.isPinned
-}
+  rumour.isPinned = !rumour.isPinned;
+};
 
 const handleDragStart = ({ rumour, event }) => {
-  startDrag(rumour, event)
-}
+  startDrag(rumour, event);
+};
 </script>
 
 <style scoped>
