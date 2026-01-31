@@ -68,7 +68,9 @@ export function useRumours() {
     error.value = null
 
     try {
-      const response = await fetch('/rumours.psv')
+      // Use BASE_URL to respect Vite's base path configuration
+      const baseUrl = import.meta.env.BASE_URL || '/'
+      const response = await fetch(`${baseUrl}rumours.psv`)
       
       if (!response.ok) {
         throw new Error(`Failed to load rumours: ${response.status} ${response.statusText}`)
