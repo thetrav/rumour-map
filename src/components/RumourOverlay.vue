@@ -30,6 +30,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRumours } from '../composables/useRumours'
+import { useRumourDrag } from '../composables/useRumourDrag'
 import RumourMarker from './RumourMarker.vue'
 
 const props = defineProps({
@@ -45,6 +46,7 @@ const props = defineProps({
 })
 
 const { rumours, isLoading, error } = useRumours()
+const { startDrag } = useRumourDrag(props.mapTransform)
 
 // Filter out hidden rumours
 const visibleRumours = computed(() => {
@@ -55,40 +57,8 @@ const handleTogglePin = (rumour) => {
   rumour.isPinned = !rumour.isPinned
 }
 
-let dragState = null
-
 const handleDragStart = ({ rumour, event }) => {
-  if (rumour.isPinned) return
-
-  rumour.isDragging = true
-  
-  const startX = event.clientX
-  const startY = event.clientY
-  const initialMapX = rumour.x
-  const initialMapY = rumour.y
-
-  const onMove = (e) => {
-    // Calculate delta in screen space, then convert to map space
-    const dx = (e.clientX - startX) / props.mapTransform.scale
-    const dy = (e.clientY - startY) / props.mapTransform.scale
-
-    // Update position, clamping to map bounds
-    rumour.x = Math.max(0, Math.min(6500, initialMapX + dx))
-    rumour.y = Math.max(0, Math.min(3600, initialMapY + dy))
-  }
-
-  const onEnd = () => {
-    rumour.isDragging = false
-    document.removeEventListener('mousemove', onMove)
-    document.removeEventListener('mouseup', onEnd)
-    dragState = null
-  }
-
-  dragState = { rumour, onMove, onEnd }
-  document.addEventListener('mousemove', onMove)
-  document.addEventListener('mouseup', onEnd)
-  
-  event.preventDefault()
+  startDrag(rumour, event)
 }
 </script>
 
