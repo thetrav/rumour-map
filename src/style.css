@@ -1,8 +1,8 @@
+@import '@primer/css/dist/primer.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import '@primer/css/dist/primer.css';
 
 body {
   margin: 0;

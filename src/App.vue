@@ -51,4 +51,3 @@ const mapImageUrl = 'https://forum.sablewyvern.com/Image/the_savage_frontier_by_
   overflow: hidden;
 }
 </style>
-
