@@ -2,10 +2,11 @@
   <div class="rumour-overlay">
     <!-- Rumour markers -->
     <RumourMarker
-      v-for="rumour in visibleRumours"
+      v-for="rumour in rumours"
       :key="rumour.id"
       :rumour="rumour"
       :map-transform="mapTransform"
+      :is-panning="mapTransform.isPanning"
       @toggle-pin="handleTogglePin"
       @drag-start="handleDragStart"
     />

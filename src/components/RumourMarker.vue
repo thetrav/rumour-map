@@ -44,7 +44,43 @@
         role="region"
         :aria-label="`Description for ${rumour.title}`"
       >
-        {{ rumour.description }}
+        <!-- Metadata Section -->
+        <div v-if="hasMetadata" class="metadata-section">
+          <div v-if="rumour.session_date" class="metadata-item">
+            <span class="metadata-label">Session:</span>
+            <span class="metadata-value">{{ formatDate(rumour.session_date) }}</span>
+          </div>
+          <div v-if="rumour.game_date" class="metadata-item">
+            <span class="metadata-label">Game Date:</span>
+            <span class="metadata-value">{{ rumour.game_date }}</span>
+          </div>
+          <div v-if="rumour.location_heard" class="metadata-item">
+            <span class="metadata-label">Heard at:</span>
+            <span class="metadata-value">{{ rumour.location_heard }}</span>
+          </div>
+          <div v-if="rumour.location_targetted" class="metadata-item">
+            <span class="metadata-label">About:</span>
+            <span class="metadata-value">{{ rumour.location_targetted }}</span>
+          </div>
+          <div v-if="rumour.rating !== null && rumour.rating !== undefined" class="metadata-item">
+            <span class="metadata-label">Rating:</span>
+            <span class="metadata-value">⭐ {{ rumour.rating }}/10</span>
+          </div>
+          <div class="metadata-item">
+            <span class="metadata-label">Status:</span>
+            <span :class="['metadata-value', rumour.resolved ? 'status-resolved' : 'status-unresolved']">
+              {{ rumour.resolved ? '✓ Resolved' : '○ Unresolved' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Details Section -->
+        <div v-if="rumour.details" class="details-section">
+          {{ rumour.details }}
+        </div>
+        <div v-else class="details-section empty">
+          <em>No details provided</em>
+        </div>
       </div>
     </transition>
   </div>
@@ -61,12 +97,45 @@ const props = defineProps({
   mapTransform: {
     type: Object,
     required: true
+  },
+  isPanning: {
+    type: Boolean,
+    default: false
   }
 })
 
 const emit = defineEmits(['toggle-pin', 'drag-start'])
 
 const markerRef = ref(null)
+
+// Check if rumour has any metadata to display
+const hasMetadata = computed(() => {
+  return !!(
+    props.rumour.session_date ||
+    props.rumour.game_date ||
+    props.rumour.location_heard ||
+    props.rumour.location_targetted ||
+    (props.rumour.rating !== null && props.rumour.rating !== undefined)
+  )
+})
+
+// Format date for display
+const formatDate = (dateString) => {
+  if (!dateString) return 'Not specified'
+  
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return dateString // Return original if parsing fails
+    
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  } catch (e) {
+    return dateString // Return original on error
+  }
+}
 
 // Calculate screen position from map coordinates
 const markerStyle = computed(() => {
@@ -86,6 +155,9 @@ const collapseTimeout = ref(null)
 const longPressTimeout = ref(null)
 
 const handleMouseEnter = () => {
+  // Don't expand markers while panning the map
+  if (props.isPanning) return
+  
   // Clear any pending collapse
   if (collapseTimeout.value) {
     clearTimeout(collapseTimeout.value)
@@ -292,6 +364,58 @@ onBeforeUnmount(() => {
   margin-top: 0.5rem;
   padding-top: 0.5rem;
   border-top: 1px solid #30363d;
+}
+
+.metadata-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #21262d;
+}
+
+.metadata-item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.metadata-label {
+  color: #6e7681;
+  font-size: 0.7rem;
+  font-weight: 500;
+  min-width: 60px;
+  flex-shrink: 0;
+}
+
+.metadata-value {
+  color: #c9d1d9;
+  font-size: 0.75rem;
+  flex: 1;
+}
+
+.status-resolved {
+  color: #3fb950 !important;
+  font-weight: 500;
+}
+
+.status-unresolved {
+  color: #f85149 !important;
+  font-weight: 500;
+}
+
+.details-section {
+  color: #8b949e;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.details-section.empty {
+  color: #6e7681;
+  font-style: italic;
 }
 
 /* Expand transition */

@@ -1,20 +1,30 @@
 # Rumour Map
 
-A Vue.js 3 application for viewing high-resolution maps with pan, zoom, and interactive rumour markers. Rumours are displayed as floating comment markers that can be expanded, unpinned, and dragged to new positions.
+A Vue.js 3 application for viewing high-resolution maps with pan, zoom, and interactive rumour markers. Rumours are loaded from Google Sheets using OAuth2 authentication, allowing real-time collaboration and easy data management.
 
 🌐 **Live Demo:** [https://surpdeh.github.io/rumour-map/](https://surpdeh.github.io/rumour-map/)
 
 ## Features
 
 ### Map Navigation
-- **Vue.js 3** with Composition API
+- **Vue.js 3** with Composition API and TypeScript support
 - **Vite** for fast development and building
 - **Tailwind CSS** for utility-first styling
-- **GitHub Primer CSS** (spec-kit) for GitHub-style UI components
 - **Pan and Zoom** functionality for high-resolution images (6500 x 3600)
 - Touch support for mobile devices (pinch-to-zoom, swipe-to-pan)
 - Responsive design for desktop, tablet, and mobile
 - Control buttons for zoom in/out and reset view
+
+### Google Sheets Integration 🔗
+- **OAuth2 Authentication**: Secure sign-in with Google accounts
+- **Real-time Data**: Load rumours directly from Google Sheets
+- **Collaborative Editing**: Multiple users can update the spreadsheet
+- **Manual Refresh**: Update rumours without page reload
+- **Filter by Status**: Toggle between all/resolved/unresolved rumours
+- **Rich Metadata**: Display session date, game date, locations, ratings
+- **Automatic Parsing**: Validates and cleans data from spreadsheet
+
+For detailed setup instructions, see [Google Sheets Setup Guide](specs/001-google-sheets-integration/quickstart.md)
 
 ### Rumours Feature ✨
 - **Interactive Markers**: Display rumours as floating markers on the map
@@ -23,8 +33,8 @@ A Vue.js 3 application for viewing high-resolution maps with pan, zoom, and inte
 - **Drag & Drop**: Drag unpinned rumours to new positions on the map
 - **Boundary Constraints**: Rumours stay within map bounds during dragging
 - **Coordinate Tracking**: Rumours maintain relative positions during zoom/pan
-- **Loading States**: Visual feedback while rumours load from file
-- **Error Handling**: Graceful handling of missing or malformed data
+- **Loading States**: Visual feedback while rumours load from Google Sheets
+- **Error Handling**: Graceful handling of authentication and data fetch errors
 - **Touch Gestures**: Tap to expand, long-press for mobile interactions
 - **Keyboard Navigation**: Full keyboard support for accessibility
   - **Tab**: Navigate between rumours
@@ -34,20 +44,48 @@ A Vue.js 3 application for viewing high-resolution maps with pan, zoom, and inte
 - **Screen Reader Support**: ARIA labels and roles for accessibility
 - **Responsive Sizing**: Markers adapt to screen size (mobile/tablet/desktop)
 
+### Legacy Data Source ⚠️ DEPRECATED
+**Note**: The PSV (Pipe-Separated Values) file data source (`public/rumours.psv`) has been replaced with Google Sheets integration. The PSV file is kept for reference but is no longer used by the application. All new rumours should be managed in Google Sheets.
+
 ## Screenshots
 
 ![Rumours Feature](https://github.com/user-attachments/assets/2835a0fe-f923-4964-95be-165704d42cbb)
 *Initial view with rumour markers displayed on the map*
 
 ![Expanded Rumour](https://github.com/user-attachments/assets/72611b11-849b-4908-be0b-9d1aa22ae45e)
-*Rumour expanded on hover showing full description*
+*Rumour expanded on hover showing full description and metadata*
 
 ## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ and npm
+- Google account for OAuth authentication
+- Google Sheets spreadsheet with rumour data (see setup guide)
 
 ### Installation
 
 ```bash
 npm install
+```
+
+### Configuration
+
+1. Copy the environment template:
+```bash
+cp .env.local.example .env.local
+```
+
+2. Fill in your Google OAuth credentials and Spreadsheet ID in `.env.local`:
+```
+VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+VITE_SPREADSHEET_ID=your-spreadsheet-id
+VITE_SHEET_NAME=Rumours
+```
+
+3. For detailed Google Sheets setup (OAuth, spreadsheet schema, permissions), see: [Google Sheets Setup Guide](specs/001-google-sheets-integration/quickstart.md)
+
+### Installation
 ```
 
 ### Development

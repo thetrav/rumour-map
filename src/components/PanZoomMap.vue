@@ -97,7 +97,7 @@ const props = defineProps({
   },
   zoomSpeed: {
     type: Number,
-    default: 0.1,
+    default: 0.05,
   },
 });
 
@@ -127,6 +127,7 @@ const mapTransform = computed(() => ({
   scale: scale.value,
   translateX: translateX.value,
   translateY: translateY.value,
+  isPanning: isPanning.value,
 }));
 
 const onImageLoad = () => {
@@ -186,12 +187,30 @@ const endPan = () => {
 const handleWheel = (e) => {
   e.preventDefault();
 
-  const rect = container.value.getBoundingClientRect();
-  const mouseX = e.clientX - rect.left;
-  const mouseY = e.clientY - rect.top;
+  // Detect trackpad gesture (smoother deltaY values and ctrlKey indicates pinch-zoom)
+  const isTrackpad = Math.abs(e.deltaY) < 100 && !e.ctrlKey;
+  const isPinchZoom = e.ctrlKey;
 
-  const delta = e.deltaY > 0 ? -props.zoomSpeed : props.zoomSpeed;
-  zoom(delta, mouseX, mouseY);
+  if (isPinchZoom) {
+    // Pinch zoom gesture (Command + scroll on trackpad)
+    const rect = container.value.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const delta = e.deltaY > 0 ? -props.zoomSpeed : props.zoomSpeed;
+    zoom(delta, mouseX, mouseY);
+  } else if (isTrackpad) {
+    // Two-finger scroll on trackpad - pan the map
+    // Natural scrolling: scroll up moves content up, scroll down moves content down
+    translateX.value -= e.deltaX;
+    translateY.value -= e.deltaY;
+  } else {
+    // Mouse wheel - zoom in/out
+    const rect = container.value.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const delta = e.deltaY > 0 ? -props.zoomSpeed : props.zoomSpeed;
+    zoom(delta, mouseX, mouseY);
+  }
 };
 
 const zoom = (delta, originX, originY) => {

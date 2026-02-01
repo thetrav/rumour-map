@@ -163,6 +163,7 @@ This document establishes the foundational principles and standards for the Rumo
 
 ## 8. Technology Standards
 - Uses Vue.JS
+- Always ues Typescript
 - Use tailwind styling.
 
 
