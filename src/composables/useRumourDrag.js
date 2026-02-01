@@ -1,12 +1,26 @@
-import { ref } from 'vue'
+import { ref, unref } from 'vue'
+import { useRumourUpdates } from './useRumourUpdates'
 
 /**
  * Composable for handling rumour drag-and-drop functionality
- * @param {Object} mapTransform - Reactive map transform object with scale, translateX, translateY
+ * @param {Object|Ref} mapTransform - Reactive map transform object or ref with scale, translateX, translateY
  * @returns {Object} - Drag handling functions
  */
 export function useRumourDrag(mapTransform) {
   const dragState = ref(null)
+  const { markAsModified } = useRumourUpdates()
+
+  /**
+   * Get the current transform values, handling both refs and plain objects
+   */
+  const getTransform = () => {
+    const transform = unref(mapTransform)
+    return {
+      scale: transform.scale,
+      translateX: transform.translateX,
+      translateY: transform.translateY
+    }
+  }
 
   /**
    * Start dragging a rumour
@@ -30,8 +44,9 @@ export function useRumourDrag(mapTransform) {
     const initialMapX = rumour.x
     const initialMapY = rumour.y
     
-    // Capture the current scale at drag start to use consistently during the drag
-    const dragScale = mapTransform.scale
+    // Capture the current transform values at drag start to use consistently during the drag
+    const transform = getTransform()
+    const dragScale = transform.scale
 
     /**
      * Handle drag movement
@@ -40,14 +55,19 @@ export function useRumourDrag(mapTransform) {
       const moveClientX = e.touches ? e.touches[0].clientX : e.clientX
       const moveClientY = e.touches ? e.touches[0].clientY : e.clientY
 
-      // Calculate delta in screen space, then convert to map space
-      // The delta needs to be divided by the scale to convert screen pixels to map coordinates
-      const dx = (moveClientX - startX) / dragScale
-      const dy = (moveClientY - startY) / dragScale
+      // Calculate delta in screen space
+      const screenDx = moveClientX - startX
+      const screenDy = moveClientY - startY
+
+      // Convert screen delta to map space by dividing by scale
+      // This accounts for the zoom level - when zoomed in (scale > 1), 
+      // screen movement represents less map distance
+      const mapDx = screenDx / dragScale
+      const mapDy = screenDy / dragScale
 
       // Update position, clamping to map bounds (0-6500, 0-3600)
-      rumour.x = Math.max(0, Math.min(6500, initialMapX + dx))
-      rumour.y = Math.max(0, Math.min(3600, initialMapY + dy))
+      rumour.x = Math.max(0, Math.min(6500, initialMapX + mapDx))
+      rumour.y = Math.max(0, Math.min(3600, initialMapY + mapDy))
 
       e.preventDefault()
     }
@@ -57,6 +77,12 @@ export function useRumourDrag(mapTransform) {
      */
     const onEnd = (e) => {
       rumour.isDragging = false
+
+      // Check if position changed
+      if (rumour.x !== rumour.originalX || rumour.y !== rumour.originalY) {
+        rumour.isModified = true
+        markAsModified(rumour.id)
+      }
 
       // Remove event listeners
       if (e.type.startsWith('touch')) {

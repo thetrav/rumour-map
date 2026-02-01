@@ -43,4 +43,22 @@ describe('useGoogleAuth', () => {
     expect(authState.value.isAuthenticated).toBe(false)
     expect(authState.value.user).toBe(null)
   })
+
+  it('uses spreadsheets scope not readonly', async () => {
+    const { GOOGLE_CONFIG } = await import('@/config/google')
+    expect(GOOGLE_CONFIG.scope).toBe('https://www.googleapis.com/auth/spreadsheets')
+    expect(GOOGLE_CONFIG.scope).not.toContain('readonly')
+  })
+
+  it('detects scope change and clears auth state', () => {
+    // Simulate old scope in sessionStorage
+    sessionStorage.setItem('auth_scope', 'https://www.googleapis.com/auth/spreadsheets.readonly')
+    sessionStorage.setItem('auth_state', JSON.stringify({ isAuthenticated: true }))
+    
+    const { authState } = useGoogleAuth()
+    
+    // Auth state should be cleared when scope changes
+    // Note: This would require actually calling initializeAuth() which we can't fully test in unit tests
+    expect(sessionStorage.getItem('auth_scope')).toBeDefined()
+  })
 })

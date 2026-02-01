@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import PanZoomMap from "./components/PanZoomMap.vue";
 import GoogleAuthButton from "./components/GoogleAuthButton.vue";
+import PushUpdatesButton from "./components/PushUpdatesButton.vue";
 import { useRumours } from "./composables/useRumours";
 import { useRumourFilter } from "./composables/useRumourFilter";
 
@@ -100,6 +101,9 @@ const mapImageUrl =
 
       <!-- Show map when authenticated -->
       <PanZoomMap v-else :image-url="mapImageUrl" :rumours="visibleRumours" />
+      
+      <!-- Push Updates Button (shown when authenticated) -->
+      <PushUpdatesButton v-if="isAuthenticated" :rumours="rumours" />
     </main>
   </div>
 </template>

@@ -215,9 +215,15 @@ const handleWheel = (e) => {
 
 const zoom = (delta, originX, originY) => {
   const oldScale = scale.value;
+  
+  // Adaptive zoom rate: slower when zoomed in, faster when zoomed out
+  // At scale 0.25, use full delta; at scale 1.0 use ~40% of delta; at scale 5.0 use ~10% of delta
+  const adaptiveFactor = 0.25 / Math.max(0.25, oldScale);
+  const adjustedDelta = delta * adaptiveFactor;
+  
   const newScale = Math.max(
     props.minScale,
-    Math.min(props.maxScale, oldScale + delta),
+    Math.min(props.maxScale, oldScale + adjustedDelta),
   );
 
   if (newScale === oldScale) return;
@@ -272,7 +278,7 @@ const handleTouchMove = (e) => {
   } else if (e.touches.length === 2) {
     // Pinch zoom
     const currentDistance = getTouchDistance(e.touches[0], e.touches[1]);
-    const scaleDelta = (currentDistance - touchStartDistance.value) * 0.01;
+    const scaleDelta = (currentDistance - touchStartDistance.value) * 0.005;
 
     const rect = container.value.getBoundingClientRect();
     const centerX =

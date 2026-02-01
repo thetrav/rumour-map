@@ -6,7 +6,8 @@
       'is-pinned': rumour.isPinned,
       'is-unpinned': !rumour.isPinned,
       'is-hovered': rumour.isHovered,
-      'is-dragging': rumour.isDragging
+      'is-dragging': rumour.isDragging,
+      'is-modified': rumour.isModified
     }"
     :style="markerStyle"
     @mouseenter="handleMouseEnter"
@@ -17,7 +18,7 @@
     @touchmove="handleTouchMove"
     @keydown="handleKeyDown"
     :tabindex="0"
-    :aria-label="`Rumour: ${rumour.title}`"
+    :aria-label="rumour.isModified ? `Rumour: ${rumour.title} (Position modified, pending push)` : `Rumour: ${rumour.title}`"
     :aria-expanded="rumour.isHovered"
     role="article"
   >
@@ -33,6 +34,14 @@
         <span v-else>⋮⋮</span>
       </button>
       <div class="marker-title">{{ rumour.title }}</div>
+      <span 
+        v-if="rumour.isModified" 
+        class="modified-indicator" 
+        aria-label="Position modified, pending push"
+        title="Position changed - click Push Updates to save"
+      >
+        ⚠️
+      </span>
     </div>
 
     <!-- Description (shown on hover or mobile tap) -->
@@ -290,7 +299,7 @@ onBeforeUnmount(() => {
   max-width: 200px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   transition: all 0.2s ease-out;
-  transform: translate(-50%, -50%);
+  transform-origin: top left;
   pointer-events: auto;
   touch-action: none; /* Prevent default touch behaviors */
 }
@@ -308,6 +317,12 @@ onBeforeUnmount(() => {
 .rumour-marker.is-unpinned {
   cursor: grab;
   border-color: #f78166;
+}
+
+.rumour-marker.is-modified {
+  border-color: #d29922;
+  border-width: 2px;
+  box-shadow: 0 0 0 2px rgba(210, 153, 34, 0.2), 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
 .rumour-marker.is-dragging {
@@ -355,6 +370,22 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
+}
+
+.modified-indicator {
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .marker-description {
