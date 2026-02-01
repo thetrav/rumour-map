@@ -25,6 +25,12 @@ export interface Rumour {
   isHovered: boolean            // Whether marker is being hovered
   isHidden: boolean             // Whether marker is hidden from view
   isDragging: boolean           // Whether marker is being dragged
+  
+  // Sync state (for position updates - 002-update-rumour-positions)
+  sheetRowNumber: number        // 1-indexed row number in Google Sheets (e.g., 5 for row 5)
+  originalX: number             // X coordinate when last fetched/saved from Sheets
+  originalY: number             // Y coordinate when last fetched/saved from Sheets
+  isModified: boolean           // True if current x,y differs from originalX,originalY
 }
 
 /**
@@ -85,4 +91,26 @@ export interface SheetsApiError {
   userMessage: string           // User-friendly error description
   retryable: boolean            // Whether operation can be retried
   details?: any                 // Original error object
+}
+
+/**
+ * Push error types for rumour position updates (002-update-rumour-positions)
+ */
+export type PushErrorType =
+  | 'VALIDATION_ERROR'     // Pre-push coordinate validation failed
+  | 'AUTH_ERROR'           // Not authenticated or token expired
+  | 'PERMISSION_ERROR'     // User lacks edit permission on sheet
+  | 'NETWORK_ERROR'        // Network unreachable or timeout
+  | 'RATE_LIMIT_ERROR'     // Google Sheets API rate limit hit (429)
+  | 'PARTIAL_FAILURE'      // Some rumours updated, others failed
+  | 'INVALID_RANGE_ERROR'  // Sheet name or range format invalid (400)
+  | 'UNKNOWN_ERROR'        // Unexpected error
+
+export interface PushError {
+  type: PushErrorType
+  message: string              // Technical error message (for logging)
+  userMessage: string          // User-friendly explanation
+  retryable: boolean           // Whether user can retry the operation
+  failedRumourIds?: string[]   // IDs of rumours that failed (for partial failures)
+  httpStatus?: number          // HTTP status code if applicable
 }

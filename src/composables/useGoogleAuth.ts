@@ -31,6 +31,19 @@ export function useGoogleAuth() {
       authState.value.isInitializing = true
       authState.value.error = null
 
+      // Check for scope changes and clear stale auth state
+      const currentScope = GOOGLE_CONFIG.scope
+      const storedScope = sessionStorage.getItem('auth_scope')
+      
+      if (storedScope && storedScope !== currentScope) {
+        // Scope changed, clear auth state to force re-consent
+        sessionStorage.removeItem('auth_state')
+        console.log('OAuth scope changed, re-authentication required')
+      }
+      
+      // Store current scope for future checks
+      sessionStorage.setItem('auth_scope', currentScope)
+
       // Wait for google object to be available
       const checkGoogle = setInterval(() => {
         if (window.google?.accounts) {

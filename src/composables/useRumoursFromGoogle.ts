@@ -2,6 +2,7 @@ import { ref, type Ref } from 'vue'
 import { GOOGLE_CONFIG } from '@/config/google'
 import type { Rumour, SheetsApiError } from '@/types/rumour'
 import { useGoogleAuth } from './useGoogleAuth'
+import { useRumourUpdates } from './useRumourUpdates'
 
 // In-memory cache
 let cachedData: Rumour[] | null = null
@@ -110,14 +111,39 @@ export function useRumoursFromGoogle() {
       isPinned: true,
       isHovered: false,
       isHidden: false,
-      isDragging: false
+      isDragging: false,
+      // Sync state fields (002-update-rumour-positions)
+      sheetRowNumber: index + 2,  // 1-indexed row number (row 1 = header, row 2 = first data row)
+      originalX: clampedX,        // Store original coordinates for change detection
+      originalY: clampedY,
+      isModified: false           // No modifications yet
     }
   }
 
   /**
    * Fetch rumours from Google Sheets
+   * @param useCache - Whether to use cached data if available
+   * @param bypassWarning - Skip pending changes warning (for forced refresh)
    */
-  const fetchRumours = async (useCache = true): Promise<void> => {
+  const fetchRumours = async (useCache = true, bypassWarning = false): Promise<void> => {
+    const { hasPendingChanges, pendingCount, clearAllModified } = useRumourUpdates()
+
+    // Warn if there are pending changes (T033-T034)
+    if (!bypassWarning && hasPendingChanges.value) {
+      const confirmRefresh = confirm(
+        `You have ${pendingCount.value} unsaved position change${pendingCount.value > 1 ? 's' : ''}.\n\n` +
+        `Refreshing will discard these changes. Are you sure you want to continue?`
+      )
+      
+      if (!confirmRefresh) {
+        // User cancelled - don't refresh
+        return
+      }
+      
+      // User confirmed - clear pending changes
+      clearAllModified()
+    }
+
     // Check cache
     const now = Date.now()
     if (useCache && cachedData && (now - cacheTimestamp) < CACHE_TTL) {

@@ -16,13 +16,19 @@ A Vue.js 3 application for viewing high-resolution maps with pan, zoom, and inte
 - Control buttons for zoom in/out and reset view
 
 ### Google Sheets Integration 🔗
-- **OAuth2 Authentication**: Secure sign-in with Google accounts
+- **OAuth2 Authentication**: Secure sign-in with Google accounts (requires write permissions)
 - **Real-time Data**: Load rumours directly from Google Sheets
 - **Collaborative Editing**: Multiple users can update the spreadsheet
 - **Manual Refresh**: Update rumours without page reload
+- **Push Position Updates**: Drag rumours on map and push coordinate changes back to Google Sheets
+- **Visual Change Tracking**: Amber border and warning icon show modified rumours before push
+- **Batch Updates**: Efficiently updates multiple rumour positions in a single API call
+- **Error Recovery**: Comprehensive error handling with retry options for auth/network/permission issues
 - **Filter by Status**: Toggle between all/resolved/unresolved rumours
 - **Rich Metadata**: Display session date, game date, locations, ratings
 - **Automatic Parsing**: Validates and cleans data from spreadsheet
+
+**⚠️ OAuth Re-consent Required**: If you previously authenticated with read-only access, you'll need to sign in again to grant write permissions for pushing position updates.
 
 For detailed setup instructions, see [Google Sheets Setup Guide](specs/001-google-sheets-integration/quickstart.md)
 
@@ -235,6 +241,36 @@ This application follows the spec-kit constitution and RUMOURS_SPECIFICATION.md 
 - Firefox - last 2 versions
 - Safari - last 2 versions
 - Mobile browsers (iOS Safari, Chrome Mobile)
+
+## Troubleshooting
+
+### Push Updates Issues
+
+**Problem**: "Your authentication has expired" error when pushing updates
+- **Solution**: Sign out and sign in again. Your OAuth session may have expired.
+
+**Problem**: "You do not have permission to edit this Google Sheet" error
+- **Solution**: Ask the spreadsheet owner to grant you Editor access via Google Sheets sharing settings.
+
+**Problem**: "Network connection lost" error
+- **Solution**: Check your internet connection. The Push Updates button will show a retry option once you're back online.
+
+**Problem**: "Too many requests" error (rate limiting)
+- **Solution**: Wait a moment and click Retry. Google Sheets API has rate limits; spacing out updates helps.
+
+**Problem**: Modified rumour positions not saving
+- **Solution**: Ensure you click the "Push Updates" button (bottom-right) after dragging rumours. Modified rumours show an amber border and ⚠️ icon.
+
+**Problem**: Changes lost after refresh
+- **Solution**: Always push updates before refreshing. The app will warn you if you try to refresh with unsaved changes.
+
+### General Issues
+
+**Problem**: Rumours not loading
+- **Solution**: Check that you're authenticated with Google (sign-in button in header). Verify the spreadsheet ID in `.env.local` matches your Google Sheet.
+
+**Problem**: Map is blank or not loading
+- **Solution**: Check browser console for errors. Ensure the map image URL is accessible and your network connection is stable.
 
 ## Contributing
 
