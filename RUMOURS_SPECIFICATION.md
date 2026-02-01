@@ -1,8 +1,8 @@
 # Rumours Feature Specification
 
-**Version:** 1.0  
-**Date:** 2026-01-31  
-**Status:** Draft
+**Version:** 1.1  
+**Date:** 2026-02-01  
+**Status:** Draft - Aligned with Constitution
 
 ---
 
@@ -17,6 +17,15 @@ The Rumours feature adds interactive, movable comment markers to the high-resolu
 - Allow users to "unpin" and drag rumours to new positions
 - Show title by default, expand to full description on hover
 - Maintain rumour positions relative to map coordinates during zoom/pan
+
+### 1.3 Constitution Alignment
+This specification adheres to the project constitution standards:
+- **TypeScript**: All code must use TypeScript (Section 8)
+- **Vue 3 Composition API**: Using `<script setup lang="ts">` syntax (Section 1.2)
+- **Tailwind CSS**: All styling via Tailwind (Section 8)
+- **Component Size**: Keep components under 300 lines (Section 1.3)
+- **Vitest**: Testing framework as per constitution (Section 2.2)
+- **Performance**: Maintain 60fps during interactions (Section 4.2)
 
 ---
 
@@ -57,6 +66,8 @@ R4|4800|900|Mysterious Lights|Strange glowing lights seen at night near the old 
 ---
 
 ## 3. User Interface
+
+**Styling Note:** All components must use Tailwind CSS classes for styling (per constitution Section 8). Inline styles should be avoided except for dynamic transforms.
 
 ### 3.1 Rumour Marker Appearance
 
@@ -136,13 +147,19 @@ R4|4800|900|Mysterious Lights|Strange glowing lights seen at night near the old 
 ### 4.1 Component Architecture
 
 **New Components:**
-- `RumourMarker.vue` - Individual rumour display and interaction
-- `RumourOverlay.vue` - Container for all rumours, handles positioning
-- `useRumours.js` - Composable for loading and managing rumour data
-- `useRumourDrag.js` - Composable for drag-and-drop logic
+- `RumourMarker.vue` - Individual rumour display and interaction (< 300 lines per constitution)
+- `RumourOverlay.vue` - Container for all rumours, handles positioning (< 300 lines per constitution)
+- `useRumours.ts` - Composable for loading and managing rumour data (TypeScript)
+- `useRumourDrag.ts` - Composable for drag-and-drop logic (TypeScript)
 
 **Modified Components:**
 - `PanZoomMap.vue` - Integrate RumourOverlay, expose map transform data
+
+**Technical Stack:**
+- Vue 3 Composition API with `<script setup lang="ts">` syntax
+- TypeScript for all logic and composables
+- Tailwind CSS for styling
+- Vitest for testing
 
 ### 4.2 Data Flow
 
@@ -171,9 +188,9 @@ R4|4800|900|Mysterious Lights|Strange glowing lights seen at night near the old 
 **Screen Coordinates (Display):**
 - Calculated from map coordinates + map transform
 - Formula: 
-  ```javascript
-  screenX = (mapX * scale) + translateX
-  screenY = (mapY * scale) + translateY
+  ```typescript
+  const screenX: number = (mapX * scale) + translateX
+  const screenY: number = (mapY * scale) + translateY
   ```
 - Updates on zoom/pan events
 
@@ -185,39 +202,53 @@ R4|4800|900|Mysterious Lights|Strange glowing lights seen at night near the old 
 ### 4.4 State Management
 
 **Rumour State (per marker):**
-```javascript
-{
-  id: string,
-  x: number,          // map coordinate
-  y: number,          // map coordinate
-  title: string,
-  description: string,
-  isPinned: boolean,  // default: true
-  isHovered: boolean, // default: false
-  isHidden: boolean,  // default: false
+```typescript
+interface Rumour {
+  id: string
+  x: number          // map coordinate
+  y: number          // map coordinate
+  title: string
+  description: string
+  isPinned: boolean  // default: true
+  isHovered: boolean // default: false
+  isHidden: boolean  // default: false
   isDragging: boolean // default: false
 }
 ```
 
 **Global State:**
-```javascript
-{
-  rumours: Rumour[],      // array of rumour objects
-  isLoading: boolean,     // PSV file loading state
-  error: string | null,   // loading error message
-  mapTransform: {         // from PanZoomMap
-    scale: number,
-    translateX: number,
-    translateY: number
-  }
+```typescript
+interface RumoursState {
+  rumours: Rumour[]      // array of rumour objects
+  isLoading: boolean     // PSV file loading state
+  error: string | null   // loading error message
+  mapTransform: MapTransform // from PanZoomMap
+}
+
+interface MapTransform {
+  scale: number
+  translateX: number
+  translateY: number
 }
 ```
 
 ### 4.5 PSV Parsing
 
-**Implementation in `useRumours.js`:**
-```javascript
-async function loadRumours() {
+**Implementation in `useRumours.ts`:**
+```typescript
+interface Rumour {
+  id: string
+  x: number
+  y: number
+  title: string
+  description: string
+  isPinned: boolean
+  isHovered: boolean
+  isHidden: boolean
+  isDragging: boolean
+}
+
+async function loadRumours(): Promise<Rumour[]> {
   const response = await fetch('/rumours.psv')
   const text = await response.text()
   
@@ -243,10 +274,16 @@ async function loadRumours() {
 
 ### 4.6 Drag Implementation
 
-**Key Logic in `useRumourDrag.js`:**
-```javascript
-function useDraggable(rumour, mapTransform) {
-  const startDrag = (event) => {
+**Key Logic in `useRumourDrag.ts`:**
+```typescript
+interface MapTransform {
+  scale: number
+  translateX: number
+  translateY: number
+}
+
+function useDraggable(rumour: Rumour, mapTransform: Readonly<MapTransform>) {
+  const startDrag = (event: MouseEvent): void => {
     if (rumour.isPinned) return
     
     rumour.isDragging = true
@@ -255,7 +292,7 @@ function useDraggable(rumour, mapTransform) {
     const initialMapX = rumour.x
     const initialMapY = rumour.y
     
-    const onMove = (e) => {
+    const onMove = (e: MouseEvent): void => {
       const dx = (e.clientX - startX) / mapTransform.scale
       const dy = (e.clientY - startY) / mapTransform.scale
       
@@ -263,7 +300,7 @@ function useDraggable(rumour, mapTransform) {
       rumour.y = initialMapY + dy
     }
     
-    const onEnd = () => {
+    const onEnd = (): void => {
       rumour.isDragging = false
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onEnd)
@@ -390,17 +427,19 @@ function useDraggable(rumour, mapTransform) {
 
 ## 10. Testing Strategy
 
-### 10.1 Unit Tests
+### 10.1 Unit Tests (Vitest)
 - PSV parsing with valid/invalid data
 - Coordinate transformation calculations
 - Drag boundary constraints
 - Pin/unpin state toggles
+- TypeScript type safety validation
 
-### 10.2 Integration Tests
+### 10.2 Integration Tests (Vitest)
 - Loading rumours and displaying markers
 - Dragging updates coordinates correctly
 - Hover expansion/collapse timing
 - Map zoom/pan updates marker positions
+- Component lifecycle and cleanup
 
 ### 10.3 Manual Testing Checklist
 - [ ] Load 10 rumours from PSV file
