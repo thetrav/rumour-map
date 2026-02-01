@@ -38,6 +38,10 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          VITE_GOOGLE_CLIENT_ID: 195188546056-mggt3lnbi74a0ku0qste80g6b4baj0qc.apps.googleusercontent.com
+          VITE_SPREADSHEET_ID: 141Z_pCcEpdx-XXl_VL5vN4xUA3OT5-h5zZ0Vo0Wal1o
+          VITE_SHEET_NAME: Rumours
         run: npm run build
 
       - name: Setup Pages
