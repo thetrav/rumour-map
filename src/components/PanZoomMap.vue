@@ -99,7 +99,13 @@ const props = defineProps({
     type: Number,
     default: 0.05,
   },
+  isAddMode: {
+    type: Boolean,
+    default: false,
+  },
 });
+
+const emit = defineEmits(['map-click']);
 
 const container = ref(null);
 const content = ref(null);
@@ -118,7 +124,7 @@ const touches = ref([]);
 const contentStyle = computed(() => ({
   transform: `translate(${translateX.value}px, ${translateY.value}px) scale(${scale.value})`,
   transformOrigin: "0 0",
-  cursor: isPanning.value ? "grabbing" : "grab",
+  cursor: props.isAddMode ? "crosshair" : (isPanning.value ? "grabbing" : "grab"),
   transition: isPanning.value ? "none" : "transform 0.1s ease-out",
 }));
 
@@ -159,6 +165,12 @@ const fitToScreen = () => {
 
 const startPan = (e) => {
   if (e.button !== 0) return; // Only left mouse button
+
+  // If in add mode, handle map click instead of panning
+  if (props.isAddMode) {
+    handleMapClick(e);
+    return;
+  }
 
   isPanning.value = true;
   startPoint.value = {
@@ -320,6 +332,28 @@ const getTouchDistance = (touch1, touch2) => {
   const dx = touch1.clientX - touch2.clientX;
   const dy = touch1.clientY - touch2.clientY;
   return Math.sqrt(dx * dx + dy * dy);
+};
+
+/**
+ * Handle map click in add mode
+ * Converts screen coordinates to map coordinates
+ */
+const handleMapClick = (e) => {
+  if (!props.isAddMode) return;
+
+  const rect = container.value.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  const clickY = e.clientY - rect.top;
+
+  // Convert screen coordinates to map coordinates
+  const mapX = (clickX - translateX.value) / scale.value;
+  const mapY = (clickY - translateY.value) / scale.value;
+
+  // Clamp to map bounds (0-6500 x 0-3600)
+  const clampedX = Math.max(0, Math.min(6500, Math.round(mapX)));
+  const clampedY = Math.max(0, Math.min(3600, Math.round(mapY)));
+
+  emit('map-click', { x: clampedX, y: clampedY });
 };
 
 onMounted(() => {

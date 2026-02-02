@@ -3,8 +3,11 @@ import { computed } from "vue";
 import PanZoomMap from "./components/PanZoomMap.vue";
 import GoogleAuthButton from "./components/GoogleAuthButton.vue";
 import PushUpdatesButton from "./components/PushUpdatesButton.vue";
+import AddRumourForm from "./components/AddRumourForm.vue";
 import { useRumours } from "./composables/useRumours";
 import { useRumourFilter } from "./composables/useRumourFilter";
+import { useAddRumour } from "./composables/useAddRumour";
+import { useAddRumourToSheets } from "./composables/useAddRumourToSheets";
 
 const { rumours, isLoading, error, isAuthenticated, loadRumours, refresh, getHeaderMapping } = useRumours();
 
@@ -16,8 +19,41 @@ const visibleRumours = computed(() => {
   return filteredRumours?.value?.filter((rumour) => !rumour.isHidden) ?? [];
 });
 
+// Add rumour state
+const { isAddMode, pendingCoordinates, showForm, startAddMode, captureCoordinates, cancelAdd, completeAdd } = useAddRumour();
+const { isAdding, addError, addRumour } = useAddRumourToSheets();
+
 const mapImageUrl =
   "https://forum.sablewyvern.com/Image/the_savage_frontier_by_yora_player_map_v2.png";
+
+// Handle map click in add mode
+const handleMapClick = (coords: { x: number; y: number }) => {
+  captureCoordinates(coords.x, coords.y);
+};
+
+// Handle save from form
+const handleSaveRumour = async (formData: any) => {
+  if (!pendingCoordinates.value) return;
+
+  const newRumourData = {
+    ...formData,
+    x: pendingCoordinates.value.x,
+    y: pendingCoordinates.value.y
+  };
+
+  const success = await addRumour(newRumourData, getHeaderMapping());
+  
+  if (success) {
+    completeAdd();
+    // Refresh to show the new rumour
+    await refresh();
+  }
+};
+
+// Handle cancel from form
+const handleCancelAdd = () => {
+  cancelAdd();
+};
 </script>
 
 <template>
@@ -75,6 +111,17 @@ const mapImageUrl =
 
       <!-- Authenticated Actions -->
       <div v-if="isAuthenticated" class="Header-item">
+        <button 
+          @click="startAddMode" 
+          :class="['btn-add-rumour', { 'active': isAddMode }]" 
+          :disabled="isLoading"
+          :title="isAddMode ? 'Click on map to place rumour' : 'Add new rumour'"
+        >
+          {{ isAddMode ? '📍 Click Map' : '➕ Add Rumour' }}
+        </button>
+      </div>
+
+      <div v-if="isAuthenticated" class="Header-item">
         <button @click="refresh" class="btn-refresh" :disabled="isLoading">
           {{ isLoading ? 'Refreshing...' : 'Refresh' }}
         </button>
@@ -100,10 +147,25 @@ const mapImageUrl =
       </div>
 
       <!-- Show map when authenticated -->
-      <PanZoomMap v-else :image-url="mapImageUrl" :rumours="visibleRumours" />
+      <PanZoomMap 
+        v-else 
+        :image-url="mapImageUrl" 
+        :rumours="visibleRumours" 
+        :is-add-mode="isAddMode"
+        @map-click="handleMapClick"
+      />
       
       <!-- Push Updates Button (shown when authenticated) -->
       <PushUpdatesButton v-if="isAuthenticated" :rumours="rumours" :get-header-mapping="getHeaderMapping" />
+
+      <!-- Add Rumour Form -->
+      <AddRumourForm
+        v-if="pendingCoordinates"
+        :show="showForm"
+        :coordinates="pendingCoordinates"
+        @save="handleSaveRumour"
+        @cancel="handleCancelAdd"
+      />
     </main>
   </div>
 </template>
@@ -194,6 +256,41 @@ const mapImageUrl =
   background-color: #1f6feb;
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.btn-add-rumour {
+  background-color: #1f6feb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.btn-add-rumour:hover:not(:disabled) {
+  background-color: #388bfd;
+}
+
+.btn-add-rumour:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-add-rumour.active {
+  background-color: #238636;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(35, 134, 54, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(35, 134, 54, 0);
+  }
 }
 
 .Label {
