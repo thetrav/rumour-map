@@ -191,6 +191,28 @@ You can also trigger deployment manually:
 
 The deployed site will be available at: `https://surpdeh.github.io/rumour-map/`
 
+### PR Preview Deployments
+
+Every pull request automatically gets a preview deployment that allows you to test changes before merging.
+
+#### How it Works
+
+1. **Automatic Preview**: When you open a PR or push new commits, a preview is automatically built and deployed
+2. **Preview URL**: The preview deployment URL is posted as a comment on the pull request
+3. **Updates**: Each new commit updates the same preview URL (no per-commit URLs)
+4. **Cleanup**: When a PR is closed or merged, the preview is automatically removed
+
+#### Accessing Previews
+
+- Preview URLs follow the format: `https://surpdeh.github.io/rumour-map/pr-{number}/`
+- The URL is automatically commented on each PR by the GitHub Actions bot
+- Previews use the same environment variables as production
+
+#### Workflows
+
+- `.github/workflows/preview.yml` - Builds and deploys PR previews
+- `.github/workflows/preview-cleanup.yml` - Removes previews when PRs close
+
 ## Project Structure
 
 ```
