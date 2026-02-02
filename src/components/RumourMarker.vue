@@ -375,6 +375,12 @@ const handleTouchMove = (e) => {
 
 // Keyboard navigation
 const handleKeyDown = (e) => {
+  // Don't handle keyboard shortcuts when in edit mode (except Escape)
+  // This allows inputs to handle Enter, Space, and Arrow keys naturally
+  if (isEditing.value && e.key !== 'Escape') {
+    return
+  }
+  
   switch (e.key) {
     case 'Enter':
     case ' ':
