@@ -1,0 +1,49 @@
+name: Deploy PR Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches-ignore:
+      - main
+
+# contents: write is required for deploying the GitHub Pages if using the default GITHUB_TOKEN
+# pull-requests: write is required to comment the preview page url to the pull request
+permissions:
+  pull-requests: write
+  contents: write
+
+# recommended to set a concurrency group
+concurrency:
+  group: preview-pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        env:
+          VITE_GOOGLE_CLIENT_ID: 195188546056-mggt3lnbi74a0ku0qste80g6b4baj0qc.apps.googleusercontent.com
+          VITE_SPREADSHEET_ID: 141Z_pCcEpdx-XXl_VL5vN4xUA3OT5-h5zZ0Vo0Wal1o
+          VITE_SHEET_NAME: Rumours
+        run: npm run build
+
+      - name: Deploy Preview
+        uses: rajyan/preview-pages@v1
+        with:
+          source-dir: dist
+          pr-comment: sticky
+          pr-per-commit: false
