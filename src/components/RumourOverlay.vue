@@ -1,21 +1,35 @@
 <template>
   <div class="rumour-overlay">
-    <!-- Rumour markers -->
-    <RumourMarker
-      v-for="rumour in rumours"
-      :key="rumour.id"
-      :rumour="rumour"
-      :map-transform="mapTransform"
-      :is-panning="mapTransform.isPanning"
-      @toggle-pin="handleTogglePin"
-      @drag-start="handleDragStart"
-    />
+    <!-- Clustered rumour markers -->
+    <template v-for="cluster in clusters" :key="cluster.id">
+      <!-- Single rumour (no cluster) -->
+      <RumourMarker
+        v-if="!cluster.isCluster"
+        :rumour="cluster.rumours[0]"
+        :map-transform="mapTransform"
+        :is-panning="mapTransform.isPanning"
+        @toggle-pin="handleTogglePin"
+        @drag-start="handleDragStart"
+      />
+      <!-- Cluster marker -->
+      <ClusterMarker
+        v-else
+        :cluster="cluster"
+        :map-transform="mapTransform"
+        :is-panning="mapTransform.isPanning"
+        @toggle-pin="handleTogglePin"
+        @drag-start="handleDragStart"
+      />
+    </template>
   </div>
 </template>
 
 <script setup>
-import { useRumourDrag } from "../composables/useRumourDrag";
-import RumourMarker from "./RumourMarker.vue";
+import { toRef } from 'vue';
+import { useRumourDrag } from '../composables/useRumourDrag';
+import { useRumourClustering } from '../composables/useRumourClustering';
+import RumourMarker from './RumourMarker.vue';
+import ClusterMarker from './ClusterMarker.vue';
 
 const props = defineProps({
   rumours: {
@@ -34,6 +48,13 @@ const props = defineProps({
 });
 
 const { startDrag } = useRumourDrag(props.mapTransform);
+
+// Use clustering with 100px radius
+const { clusters } = useRumourClustering(
+  toRef(props, "rumours"),
+  toRef(props, "mapTransform"),
+  100
+);
 
 const handleTogglePin = (rumour) => {
   rumour.isPinned = !rumour.isPinned;

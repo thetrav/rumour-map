@@ -33,7 +33,7 @@
         <span v-if="rumour.isPinned">📍</span>
         <span v-else>⋮⋮</span>
       </button>
-      <div class="marker-title">{{ rumour.title }}</div>
+      <div v-if="rumour.isHovered" class="marker-title">{{ rumour.title }}</div>
       <span 
         v-if="rumour.isModified" 
         class="modified-indicator" 
@@ -290,18 +290,26 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+:root {
+  --pin-size: 35px;
+}
+
 .rumour-marker {
   position: absolute;
   background-color: rgba(22, 27, 34, 0.9);
   border: 1px solid #58a6ff;
   border-radius: 6px;
-  padding: 0.5rem;
-  max-width: 200px;
+  padding: 0.25rem;
+  width: var(--pin-size);
+  height: var(--pin-size);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   transition: all 0.2s ease-out;
   transform-origin: top left;
   pointer-events: auto;
   touch-action: none; /* Prevent default touch behaviors */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .rumour-marker:focus {
@@ -333,8 +341,12 @@ onBeforeUnmount(() => {
 
 .rumour-marker.is-hovered {
   background-color: rgba(22, 27, 34, 0.95);
+  width: auto;
+  height: auto;
   max-width: 300px;
+  padding: 0.5rem;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+  display: block;
 }
 
 .marker-header {
@@ -343,15 +355,23 @@ onBeforeUnmount(() => {
   gap: 0.5rem;
 }
 
+.rumour-marker:not(.is-hovered) .marker-header {
+  justify-content: center;
+}
+
 .pin-button {
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
-  font-size: 1rem;
+  font-size: 1.2rem;
   line-height: 1;
   transition: transform 0.1s;
   flex-shrink: 0;
+}
+
+.rumour-marker.is-hovered .pin-button {
+  font-size: 1rem;
 }
 
 .pin-button:hover {
@@ -472,25 +492,27 @@ onBeforeUnmount(() => {
 
 /* Responsive sizing */
 @media (max-width: 1023px) {
-  .rumour-marker {
-    max-width: 180px;
-    font-size: 0.875rem;
+  .rumour-marker:not(.is-hovered) {
+    width: 32px;
+    height: 32px;
   }
 
   .rumour-marker.is-hovered {
     max-width: 250px;
+    font-size: 0.875rem;
   }
 }
 
 @media (max-width: 767px) {
-  .rumour-marker {
-    max-width: 150px;
-    font-size: 0.75rem;
-    padding: 0.375rem;
+  .rumour-marker:not(.is-hovered) {
+    width: 28px;
+    height: 28px;
   }
 
   .rumour-marker.is-hovered {
     max-width: 200px;
+    font-size: 0.75rem;
+    padding: 0.375rem;
   }
 
   .marker-description {
