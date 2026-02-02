@@ -9,6 +9,9 @@ let cachedData: Rumour[] | null = null
 let cacheTimestamp: number = 0
 const CACHE_TTL = 60000 // 1 minute
 
+// Header mapping cache
+let headerMapping: Map<string, number> | null = null
+
 /**
  * Composable for fetching and parsing rumours from Google Sheets
  */
@@ -58,18 +61,53 @@ export function useRumoursFromGoogle() {
   }
 
   /**
-   * Parse a single row from Google Sheets into a Rumour object
+   * Build header mapping from the first row of the sheet
    */
-  const parseSheetRow = (row: string[], index: number): Rumour | null => {
+  const buildHeaderMapping = (headerRow: string[]): Map<string, number> => {
+    const mapping = new Map<string, number>()
+    headerRow.forEach((header, index) => {
+      // Normalize header: trim and lowercase
+      const normalizedHeader = header.trim().toLowerCase()
+      mapping.set(normalizedHeader, index)
+    })
+    return mapping
+  }
+
+  /**
+   * Get column index from header mapping with fallback
+   */
+  const getColumnIndex = (headers: Map<string, number>, ...possibleNames: string[]): number | null => {
+    for (const name of possibleNames) {
+      const index = headers.get(name.toLowerCase())
+      if (index !== undefined) return index
+    }
+    return null
+  }
+
+  /**
+   * Parse a single row from Google Sheets into a Rumour object
+   * Uses dynamic header mapping instead of hardcoded column indices
+   */
+  const parseSheetRow = (row: string[], index: number, headers: Map<string, number>): Rumour | null => {
+    // Get column indices from headers
+    const titleIdx = getColumnIndex(headers, 'title', 'rumour', 'name')
+    const xIdx = getColumnIndex(headers, 'x', 'x coordinate', 'x_coordinate')
+    const yIdx = getColumnIndex(headers, 'y', 'y coordinate', 'y_coordinate')
+
     // Skip rows with missing required fields (title, X, Y)
-    if (!row[6] || !row[4] || !row[5]) {
+    if (titleIdx === null || xIdx === null || yIdx === null) {
+      console.warn(`Cannot find required columns (title, X, Y) in header`)
+      return null
+    }
+
+    if (!row[titleIdx] || !row[xIdx] || !row[yIdx]) {
       console.warn(`Skipping row ${index + 2}: missing required fields (title, X, or Y)`)
       return null
     }
 
     // Parse coordinates
-    const x = parseFloat(row[4])
-    const y = parseFloat(row[5])
+    const x = parseFloat(row[xIdx])
+    const y = parseFloat(row[yIdx])
 
     // Validate numeric coordinates
     if (isNaN(x) || isNaN(y)) {
@@ -86,28 +124,38 @@ export function useRumoursFromGoogle() {
       console.warn(`Row ${index + 2}: coordinates clamped from (${x}, ${y}) to (${clampedX}, ${clampedY})`)
     }
 
+    // Get optional field indices
+    const sessionDateIdx = getColumnIndex(headers, 'session_date', 'session date', 'session')
+    const gameDateIdx = getColumnIndex(headers, 'game_date', 'game date', 'date')
+    const locationHeardIdx = getColumnIndex(headers, 'location_heard', 'location heard', 'heard at')
+    const locationTargettedIdx = getColumnIndex(headers, 'location_targetted', 'location targetted', 'location targeted', 'about', 'target')
+    const ratingIdx = getColumnIndex(headers, 'rating', 'quality', 'importance')
+    const resolvedIdx = getColumnIndex(headers, 'resolved', 'status', 'complete')
+    const detailsIdx = getColumnIndex(headers, 'details', 'description', 'notes')
+
     // Parse rating (optional)
-    const rating = row[7] ? parseFloat(row[7]) : null
+    const ratingStr = ratingIdx !== null ? row[ratingIdx] : null
+    const rating = ratingStr ? parseFloat(ratingStr) : null
     const validRating = rating !== null && !isNaN(rating) 
       ? Math.max(0, Math.min(10, rating)) 
       : null
 
     // Parse resolved status
-    const resolvedStr = (row[8] || '').toLowerCase().trim()
+    const resolvedStr = resolvedIdx !== null ? (row[resolvedIdx] || '').toLowerCase().trim() : ''
     const resolved = ['true', 'yes', '1'].includes(resolvedStr)
 
     return {
       id: `rumour_${index + 2}`, // Row number as ID (row 1 is header)
-      session_date: row[0]?.trim() || null,
-      game_date: row[1]?.trim() || null,
-      location_heard: row[2]?.trim() || null,
-      location_targetted: row[3]?.trim() || null,
+      session_date: sessionDateIdx !== null ? (row[sessionDateIdx]?.trim() || null) : null,
+      game_date: gameDateIdx !== null ? (row[gameDateIdx]?.trim() || null) : null,
+      location_heard: locationHeardIdx !== null ? (row[locationHeardIdx]?.trim() || null) : null,
+      location_targetted: locationTargettedIdx !== null ? (row[locationTargettedIdx]?.trim() || null) : null,
       x: clampedX,
       y: clampedY,
-      title: row[6].trim(),
+      title: row[titleIdx].trim(),
       rating: validRating,
       resolved: resolved,
-      details: row[9]?.trim() || null,
+      details: detailsIdx !== null ? (row[detailsIdx]?.trim() || null) : null,
       isPinned: true,
       isHovered: false,
       isHidden: false,
@@ -116,7 +164,20 @@ export function useRumoursFromGoogle() {
       sheetRowNumber: index + 2,  // 1-indexed row number (row 1 = header, row 2 = first data row)
       originalX: clampedX,        // Store original coordinates for change detection
       originalY: clampedY,
-      isModified: false           // No modifications yet
+      isModified: false,          // No modifications yet
+      modifiedFields: new Set(),  // Track which fields are modified
+      originalValues: {           // Store original values for all editable fields
+        session_date: sessionDateIdx !== null ? (row[sessionDateIdx]?.trim() || null) : null,
+        game_date: gameDateIdx !== null ? (row[gameDateIdx]?.trim() || null) : null,
+        location_heard: locationHeardIdx !== null ? (row[locationHeardIdx]?.trim() || null) : null,
+        location_targetted: locationTargettedIdx !== null ? (row[locationTargettedIdx]?.trim() || null) : null,
+        x: clampedX,
+        y: clampedY,
+        title: row[titleIdx].trim(),
+        rating: validRating,
+        resolved: resolved,
+        details: detailsIdx !== null ? (row[detailsIdx]?.trim() || null) : null
+      }
     }
   }
 
@@ -175,8 +236,8 @@ export function useRumoursFromGoogle() {
       // Set access token
       window.gapi.client.setToken({ access_token: getAccessToken() })
 
-      // Build range string
-      const range = `${GOOGLE_CONFIG.sheetName}!${GOOGLE_CONFIG.sheetRange}`
+      // Build range string to include header row (starting from A1)
+      const range = `${GOOGLE_CONFIG.sheetName}!A1:Z`
 
       // Fetch data
       const response = await window.gapi.client.sheets.spreadsheets.values.get({
@@ -186,9 +247,24 @@ export function useRumoursFromGoogle() {
 
       const rows = response.result.values || []
 
-      // Parse rows
-      const parsedRumours = rows
-        .map((row: string[], index: number) => parseSheetRow(row, index))
+      if (rows.length === 0) {
+        console.warn('No data found in sheet')
+        rumours.value = []
+        cachedData = []
+        cacheTimestamp = Date.now()
+        lastFetchTime.value = cacheTimestamp
+        return
+      }
+
+      // First row is the header
+      const headerRow = rows[0]
+      headerMapping = buildHeaderMapping(headerRow)
+      console.log('Header mapping:', Object.fromEntries(headerMapping))
+
+      // Parse data rows (skip header)
+      const dataRows = rows.slice(1)
+      const parsedRumours = dataRows
+        .map((row: string[], index: number) => parseSheetRow(row, index, headerMapping!))
         .filter((rumour: Rumour | null): rumour is Rumour => rumour !== null)
 
       rumours.value = parsedRumours
@@ -271,12 +347,20 @@ export function useRumoursFromGoogle() {
     await fetchRumours(false)
   }
 
+  /**
+   * Get the current header mapping (for write operations)
+   */
+  const getHeaderMapping = (): Map<string, number> | null => {
+    return headerMapping
+  }
+
   return {
     rumours,
     isLoading,
     error,
     lastFetchTime,
     fetchRumours,
-    refresh
+    refresh,
+    getHeaderMapping
   }
 }

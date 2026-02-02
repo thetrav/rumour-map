@@ -8,6 +8,18 @@ import type { Rumour, PushError, PushErrorType } from '@/types/rumour'
 const modifiedRumours: Ref<Set<string>> = ref(new Set())
 
 /**
+ * Convert column index (0-based) to Excel column letter (A, B, C, ..., Z, AA, AB, ...)
+ */
+const columnIndexToLetter = (index: number): string => {
+  let letter = ''
+  while (index >= 0) {
+    letter = String.fromCharCode((index % 26) + 65) + letter
+    index = Math.floor(index / 26) - 1
+  }
+  return letter
+}
+
+/**
  * Composable for managing rumour position updates to Google Sheets
  * 
  * Provides functionality to track position changes, validate coordinates,
@@ -56,9 +68,25 @@ export function useRumourUpdates() {
    * which enables the Push Updates button and tracks pending changes.
    * 
    * @param rumourId - Unique identifier of the rumour (e.g., 'rumour_2')
+   * @param fieldName - Optional field name that was modified
    */
-  const markAsModified = (rumourId: string) => {
+  const markAsModified = (rumourId: string, fieldName?: string) => {
     modifiedRumours.value.add(rumourId)
+  }
+
+  /**
+   * Mark a specific field as modified for a rumour
+   * 
+   * @param rumour - The rumour object
+   * @param fieldName - Name of the field that was modified
+   */
+  const markFieldAsModified = (rumour: Rumour, fieldName: string) => {
+    if (!rumour.modifiedFields) {
+      rumour.modifiedFields = new Set()
+    }
+    rumour.modifiedFields.add(fieldName)
+    rumour.isModified = true
+    markAsModified(rumour.id, fieldName)
   }
 
   /**
@@ -178,32 +206,33 @@ export function useRumourUpdates() {
   }
 
   /**
-   * Push position updates to Google Sheets
+   * Push updates to Google Sheets
    * 
-   * Batches all pending position changes into a single Google Sheets API
-   * batchUpdate call for efficiency. Updates columns E (X) and F (Y) for
-   * each modified rumour's corresponding row.
+   * Batches all pending changes (positions and other fields) into a single Google Sheets API
+   * batchUpdate call for efficiency. Uses header mapping to determine column positions.
    * 
    * Process:
    * 1. Filters rumours to only those marked as modified
    * 2. Validates coordinates are within map bounds
-   * 3. Builds batch update request with ranges like "Sheet!E2:F2"
+   * 3. Builds batch update request using header mapping for column locations
    * 4. Calls Google Sheets API batchUpdate endpoint
-   * 5. On success: Updates originalX/Y, clears modified flags
+   * 5. On success: Updates original values, clears modified flags
    * 6. On error: Preserves state and provides user-friendly error
    * 
    * @param rumours - Array of all rumours (modified ones will be pushed)
+   * @param headerMapping - Optional header mapping from Google Sheets (maps field names to column indices)
    * @returns Promise that resolves when push completes (success or error)
    * 
    * @example
    * ```typescript
-   * await pushUpdates(rumours)
+   * const { getHeaderMapping } = useRumoursFromGoogle()
+   * await pushUpdates(rumours, getHeaderMapping())
    * if (pushError.value) {
    *   console.error(pushError.value.userMessage)
    * }
    * ```
    */
-  const pushUpdates = async (rumours: Rumour[]): Promise<void> => {
+  const pushUpdates = async (rumours: Rumour[], headerMapping?: Map<string, number> | null): Promise<void> => {
     isPushing.value = true
     pushError.value = null
 
@@ -215,7 +244,7 @@ export function useRumourUpdates() {
         pushError.value = {
           type: 'VALIDATION_ERROR',
           message: 'No changes to push',
-          userMessage: 'No position changes to update.',
+          userMessage: 'No changes to update.',
           retryable: false
         }
         isPushing.value = false
@@ -241,11 +270,48 @@ export function useRumourUpdates() {
       }
 
       // Build batch update request
-      // Columns E and F contain X and Y coordinates respectively
-      const updates = valid.map(rumour => ({
-        range: `${GOOGLE_CONFIG.sheetName}!E${rumour.sheetRowNumber}:F${rumour.sheetRowNumber}`,
-        values: [[rumour.x, rumour.y]]
-      }))
+      const updates: any[] = []
+
+      for (const rumour of valid) {
+        // Determine which fields to update
+        const fieldsToUpdate = rumour.modifiedFields && rumour.modifiedFields.size > 0
+          ? Array.from(rumour.modifiedFields)
+          : ['x', 'y'] // Default to x,y if no specific fields tracked (backwards compatibility)
+
+        // If we have header mapping, use it to build precise updates
+        if (headerMapping) {
+          for (const fieldName of fieldsToUpdate) {
+            const columnIndex = getColumnIndexForField(fieldName, headerMapping)
+            if (columnIndex !== null) {
+              const columnLetter = columnIndexToLetter(columnIndex)
+              const range = `${GOOGLE_CONFIG.sheetName}!${columnLetter}${rumour.sheetRowNumber}`
+              const value = getFieldValue(rumour, fieldName)
+              updates.push({
+                range,
+                values: [[value]]
+              })
+            }
+          }
+        } else {
+          // Fallback: update only X and Y using hardcoded columns E and F
+          const range = `${GOOGLE_CONFIG.sheetName}!E${rumour.sheetRowNumber}:F${rumour.sheetRowNumber}`
+          updates.push({
+            range,
+            values: [[rumour.x, rumour.y]]
+          })
+        }
+      }
+
+      if (updates.length === 0) {
+        pushError.value = {
+          type: 'VALIDATION_ERROR',
+          message: 'No valid updates to push',
+          userMessage: 'No valid changes to update.',
+          retryable: false
+        }
+        isPushing.value = false
+        return
+      }
 
       // Make API call
       const response = await gapi.client.sheets.spreadsheets.values.batchUpdate({
@@ -258,6 +324,17 @@ export function useRumourUpdates() {
 
       // Success: update rumour state
       valid.forEach(rumour => {
+        // Update original values for all modified fields
+        if (rumour.modifiedFields) {
+          rumour.modifiedFields.forEach(fieldName => {
+            if (rumour.originalValues) {
+              rumour.originalValues[fieldName] = (rumour as any)[fieldName]
+            }
+          })
+          rumour.modifiedFields.clear()
+        }
+        
+        // Update position tracking
         rumour.originalX = rumour.x
         rumour.originalY = rumour.y
         rumour.isModified = false
@@ -286,6 +363,42 @@ export function useRumourUpdates() {
     }
   }
 
+  /**
+   * Get column index for a field name from header mapping
+   */
+  const getColumnIndexForField = (fieldName: string, headerMapping: Map<string, number>): number | null => {
+    const normalizedFieldName = fieldName.toLowerCase().replace(/_/g, ' ')
+    
+    // Try exact match first
+    if (headerMapping.has(normalizedFieldName)) {
+      return headerMapping.get(normalizedFieldName)!
+    }
+    
+    // Try without spaces/underscores
+    const compactName = normalizedFieldName.replace(/\s+/g, '')
+    for (const [key, value] of headerMapping.entries()) {
+      if (key.replace(/\s+/g, '') === compactName) {
+        return value
+      }
+    }
+    
+    return null
+  }
+
+  /**
+   * Get the value of a field from a rumour
+   */
+  const getFieldValue = (rumour: Rumour, fieldName: string): any => {
+    const value = (rumour as any)[fieldName]
+    
+    // Convert boolean resolved to string for sheets
+    if (fieldName === 'resolved') {
+      return value ? 'TRUE' : 'FALSE'
+    }
+    
+    return value ?? ''
+  }
+
   return {
     hasPendingChanges,
     pendingCount,
@@ -293,6 +406,7 @@ export function useRumourUpdates() {
     pushError,
     lastPushTime,
     markAsModified,
+    markFieldAsModified,
     clearModified,
     clearAllModified,
     pushUpdates

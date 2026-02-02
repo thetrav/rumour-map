@@ -29,7 +29,8 @@ export function useRumours() {
     isLoading: googleLoading, 
     error: googleError,
     fetchRumours,
-    refresh: refreshFromGoogle
+    refresh: refreshFromGoogle,
+    getHeaderMapping
   } = useRumoursFromGoogle()
 
   // Local state for UI-enhanced rumours
@@ -156,6 +157,7 @@ export function useRumours() {
     error,
     isAuthenticated,
     loadRumours,
-    refresh
+    refresh,
+    getHeaderMapping
   }
 }

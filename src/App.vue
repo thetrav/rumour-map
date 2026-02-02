@@ -6,7 +6,7 @@ import PushUpdatesButton from "./components/PushUpdatesButton.vue";
 import { useRumours } from "./composables/useRumours";
 import { useRumourFilter } from "./composables/useRumourFilter";
 
-const { rumours, isLoading, error, isAuthenticated, loadRumours, refresh } = useRumours();
+const { rumours, isLoading, error, isAuthenticated, loadRumours, refresh, getHeaderMapping } = useRumours();
 
 // Apply filtering to rumours
 const { filteredRumours, filterState, setFilter, filterMode } = useRumourFilter(rumours);
@@ -103,7 +103,7 @@ const mapImageUrl =
       <PanZoomMap v-else :image-url="mapImageUrl" :rumours="visibleRumours" />
       
       <!-- Push Updates Button (shown when authenticated) -->
-      <PushUpdatesButton v-if="isAuthenticated" :rumours="rumours" />
+      <PushUpdatesButton v-if="isAuthenticated" :rumours="rumours" :get-header-mapping="getHeaderMapping" />
     </main>
   </div>
 </template>

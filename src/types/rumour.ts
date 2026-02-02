@@ -30,7 +30,9 @@ export interface Rumour {
   sheetRowNumber: number        // 1-indexed row number in Google Sheets (e.g., 5 for row 5)
   originalX: number             // X coordinate when last fetched/saved from Sheets
   originalY: number             // Y coordinate when last fetched/saved from Sheets
-  isModified: boolean           // True if current x,y differs from originalX,originalY
+  isModified: boolean           // True if any field differs from original
+  modifiedFields?: Set<string>  // Set of field names that have been modified
+  originalValues?: Record<string, any> // Original values for all fields
 }
 
 /**
