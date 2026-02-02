@@ -83,7 +83,7 @@ import type { Rumour } from '@/types/rumour'
 
 const props = defineProps<{
   rumours: Rumour[]
-  getHeaderMapping: () => Map<string, number> | null
+  getHeaderMapping?: () => Map<string, number> | null
 }>()
 
 const { hasPendingChanges, pendingCount, isPushing, pushError, pushUpdates } = useRumourUpdates()
@@ -92,13 +92,13 @@ const showFailedItems = ref(false)
 
 const handlePush = async () => {
   showFailedItems.value = false
-  const headerMapping = props.getHeaderMapping()
+  const headerMapping = props.getHeaderMapping ? props.getHeaderMapping() : null
   await pushUpdates(props.rumours, headerMapping)
 }
 
 const handleRetry = async () => {
   showFailedItems.value = false
-  const headerMapping = props.getHeaderMapping()
+  const headerMapping = props.getHeaderMapping ? props.getHeaderMapping() : null
   await pushUpdates(props.rumours, headerMapping)
 }
 
