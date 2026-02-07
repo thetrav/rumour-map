@@ -39,14 +39,20 @@ export function useRumourDrag(mapTransform) {
     const clientX = event.touches ? event.touches[0].clientX : event.clientX
     const clientY = event.touches ? event.touches[0].clientY : event.clientY
 
-    const startX = clientX
-    const startY = clientY
-    const initialMapX = rumour.x
-    const initialMapY = rumour.y
-    
     // Capture the current transform values at drag start to use consistently during the drag
     const transform = getTransform()
     const dragScale = transform.scale
+    const dragTranslateX = transform.translateX
+    const dragTranslateY = transform.translateY
+    
+    // Calculate the marker's screen position at drag start
+    const markerScreenX = (rumour.x * dragScale) + dragTranslateX
+    const markerScreenY = (rumour.y * dragScale) + dragTranslateY
+    
+    // Calculate the offset between the click position and marker position
+    // This ensures the marker stays under the cursor at the same relative position
+    const offsetX = clientX - markerScreenX
+    const offsetY = clientY - markerScreenY
 
     /**
      * Handle drag movement
@@ -55,19 +61,18 @@ export function useRumourDrag(mapTransform) {
       const moveClientX = e.touches ? e.touches[0].clientX : e.clientX
       const moveClientY = e.touches ? e.touches[0].clientY : e.clientY
 
-      // Calculate delta in screen space
-      const screenDx = moveClientX - startX
-      const screenDy = moveClientY - startY
-
-      // Convert screen delta to map space by dividing by scale
-      // This accounts for the zoom level - when zoomed in (scale > 1), 
-      // screen movement represents less map distance
-      const mapDx = screenDx / dragScale
-      const mapDy = screenDy / dragScale
+      // Calculate the desired screen position (where the marker should be to keep the cursor at the same offset)
+      const desiredScreenX = moveClientX - offsetX
+      const desiredScreenY = moveClientY - offsetY
+      
+      // Convert screen position back to map coordinates
+      // Subtract the translation, then divide by scale
+      const mapX = (desiredScreenX - dragTranslateX) / dragScale
+      const mapY = (desiredScreenY - dragTranslateY) / dragScale
 
       // Update position, clamping to map bounds (0-6500, 0-3600)
-      rumour.x = Math.max(0, Math.min(6500, initialMapX + mapDx))
-      rumour.y = Math.max(0, Math.min(3600, initialMapY + mapDy))
+      rumour.x = Math.max(0, Math.min(6500, mapX))
+      rumour.y = Math.max(0, Math.min(3600, mapY))
 
       e.preventDefault()
     }
