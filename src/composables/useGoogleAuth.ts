@@ -28,6 +28,19 @@ export function useGoogleAuth() {
    */
   const initializeAuth = (): Promise<void> => {
     return new Promise((resolve, reject) => {
+      // If already initialized and authenticated, just resolve
+      if (tokenClient && authState.value.isAuthenticated) {
+        authState.value.isInitializing = false
+        resolve()
+        return
+      }
+
+      // If already initialized but not authenticated, just resolve
+      if (tokenClient && !authState.value.isInitializing) {
+        resolve()
+        return
+      }
+
       authState.value.isInitializing = true
       authState.value.error = null
 
@@ -78,10 +91,8 @@ export function useGoogleAuth() {
             // Check if we have a previous session
             if (sessionStorage.getItem('auth_state') === 'authenticated') {
               hadPreviousSession.value = true
-              // Automatically trigger sign-in to restore session
-              setTimeout(() => {
-                signIn()
-              }, 100)
+              // Note: Do not automatically trigger sign-in here to avoid duplicate popups
+              // The user will need to sign in again if their session has expired
             }
             
             resolve()
