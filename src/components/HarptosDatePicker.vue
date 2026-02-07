@@ -153,6 +153,7 @@ const formattedDate = computed(() => {
   // month-day type
   if (selectedMonth.value !== null && selectedYear.value) {
     const month = months[selectedMonth.value]
+    if (!month) return null // Safety check
     if (selectedDay.value) {
       return `${selectedDay.value} ${month.name}, ${selectedYear.value} DR`
     } else {
