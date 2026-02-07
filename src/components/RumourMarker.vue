@@ -33,7 +33,7 @@
         :disabled="isEditing"
       >
         <span v-if="rumour.isPinned">📍</span>
-        <span v-else class="move-icon">🔀</span>
+        <span v-else>🔀</span>
       </button>
       <div v-if="rumour.isHovered && !isEditing" class="marker-title">{{ rumour.title }}</div>
       <input
