@@ -28,15 +28,9 @@ export function useGoogleAuth() {
    */
   const initializeAuth = (): Promise<void> => {
     return new Promise((resolve, reject) => {
-      // If already initialized and authenticated, just resolve
-      if (tokenClient && authState.value.isAuthenticated) {
-        authState.value.isInitializing = false
-        resolve()
-        return
-      }
-
-      // If already initialized but not authenticated, just resolve
-      if (tokenClient && !authState.value.isInitializing) {
+      // If tokenClient is already initialized, no need to re-initialize
+      // This prevents duplicate initialization when multiple GoogleAuthButton instances mount
+      if (tokenClient) {
         resolve()
         return
       }
