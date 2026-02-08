@@ -47,7 +47,7 @@ const props = defineProps({
   },
 });
 
-const { startDrag } = useRumourDrag(props.mapTransform);
+const { startDrag } = useRumourDrag(toRef(props, "mapTransform"));
 
 // Use clustering with 100px radius
 const { clusters } = useRumourClustering(

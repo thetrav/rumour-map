@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { ref } from 'vue'
 import { useRumourDrag } from '@/composables/useRumourDrag'
 import type { Rumour } from '@/types/rumour'
 
@@ -217,6 +218,57 @@ describe('useRumourDrag', () => {
     // Should be clamped to maximum bounds
     expect(rumour.x).toBe(6500)
     expect(rumour.y).toBe(3600)
+    
+    // Clean up
+    const mouseUpEvent = new MouseEvent('mouseup')
+    document.dispatchEvent(mouseUpEvent)
+  })
+
+  it('should correctly read scale from reactive ref', () => {
+    // Test with a reactive ref to ensure scale is read correctly
+    const mapTransformRef = ref({
+      scale: 1.5,
+      translateX: 100,
+      translateY: 50
+    })
+    
+    const rumour: Partial<Rumour> = {
+      id: 'R6',
+      x: 1000,
+      y: 500,
+      isPinned: false,
+      isDragging: false
+    }
+    
+    const { startDrag } = useRumourDrag(mapTransformRef)
+    
+    // At scale 1.5, marker screen position is:
+    // screenX = (1000 * 1.5) + 100 = 1600
+    // screenY = (500 * 1.5) + 50 = 800
+    const mouseDownEvent = {
+      preventDefault: vi.fn(),
+      type: 'mousedown',
+      clientX: 1600,
+      clientY: 800,
+      button: 0
+    } as any
+    
+    startDrag(rumour as Rumour, mouseDownEvent)
+    
+    expect(rumour.isDragging).toBe(true)
+    
+    // Move 150px right and 75px down in screen space
+    const mouseMoveEvent = new MouseEvent('mousemove', {
+      clientX: 1750,
+      clientY: 875
+    })
+    
+    document.dispatchEvent(mouseMoveEvent)
+    
+    // At scale 1.5, 150px screen movement = 100px map movement
+    // At scale 1.5, 75px screen movement = 50px map movement
+    expect(rumour.x).toBe(1100)
+    expect(rumour.y).toBe(550)
     
     // Clean up
     const mouseUpEvent = new MouseEvent('mouseup')
