@@ -69,13 +69,6 @@
       >
     </div>
 
-    <!-- DIAGNOSTIC: Large scale overlay for testing -->
-    <div class="diagnostic-overlay">
-      <div class="diagnostic-scale">
-        Scale: {{ scale.toFixed(3) }}
-      </div>
-    </div>
-
     <!-- Rumour overlay -->
     <RumourOverlay :map-transform="mapTransform" :rumours="rumours" />
   </div>
@@ -242,10 +235,10 @@ const handleWheel = (e) => {
     
     // Use multiplicative zoom for pinch gestures
     // Convert deltaY to a zoom factor: positive deltaY = zoom out, negative = zoom in
-    // A full pinch gesture (deltaY ~= 100) should result in ~20% change
+    // A full pinch gesture (deltaY ~= 100) should result in ~40% change
     // Factor calculation: 1.0 + (deltaY * sensitivity)
-    // For 20% change with deltaY=100: sensitivity = 0.2/100 = 0.002
-    const zoomFactor = 1.0 + (e.deltaY * -0.002);
+    // For 40% change with deltaY=100: sensitivity = 0.4/100 = 0.004
+    const zoomFactor = 1.0 + (e.deltaY * -0.004);
     zoomMultiplicative(zoomFactor, mouseX, mouseY);
   } else if (isTrackpad) {
     // Two-finger scroll on trackpad - pan the map
@@ -309,12 +302,14 @@ const zoom = (delta, originX, originY) => {
 
 const zoomIn = () => {
   const rect = container.value.getBoundingClientRect();
-  zoom(props.zoomSpeed, rect.width / 2, rect.height / 2);
+  // Use multiplicative zoom with 40% increase (factor 1.4)
+  zoomMultiplicative(1.4, rect.width / 2, rect.height / 2);
 };
 
 const zoomOut = () => {
   const rect = container.value.getBoundingClientRect();
-  zoom(-props.zoomSpeed, rect.width / 2, rect.height / 2);
+  // Use multiplicative zoom with 40% decrease (factor ~0.714)
+  zoomMultiplicative(1 / 1.4, rect.width / 2, rect.height / 2);
 };
 
 const resetView = () => {
@@ -600,27 +595,5 @@ onUnmounted(() => {
 
 .btn:active {
   transform: scale(0.95);
-}
-
-/* DIAGNOSTIC: Large scale overlay for testing drag behavior */
-.diagnostic-overlay {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: rgba(0, 0, 0, 0.8);
-  color: #00ff00;
-  padding: 1rem 2rem;
-  border-radius: 8px;
-  font-family: 'Courier New', monospace;
-  font-size: 2rem;
-  font-weight: bold;
-  z-index: 5;
-  pointer-events: none;
-  border: 2px solid #00ff00;
-}
-
-.diagnostic-scale {
-  text-align: center;
 }
 </style>

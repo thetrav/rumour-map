@@ -54,16 +54,6 @@ export function useRumourDrag(mapTransform) {
     const offsetX = clientX - markerScreenX
     const offsetY = clientY - markerScreenY
 
-    // DIAGNOSTIC: Log drag start
-    console.log('🔵 DRAG START:', {
-      'Start Screen Pos': `(${clientX.toFixed(1)}, ${clientY.toFixed(1)})`,
-      'Start Map Pos': `(${rumour.x.toFixed(1)}, ${rumour.y.toFixed(1)})`,
-      'Scale': dragScale.toFixed(3),
-      'Translate': `(${dragTranslateX.toFixed(1)}, ${dragTranslateY.toFixed(1)})`,
-      'Marker Screen Pos': `(${markerScreenX.toFixed(1)}, ${markerScreenY.toFixed(1)})`,
-      'Click Offset': `(${offsetX.toFixed(1)}, ${offsetY.toFixed(1)})`
-    })
-
     /**
      * Handle drag movement
      */
@@ -84,18 +74,6 @@ export function useRumourDrag(mapTransform) {
       const newX = Math.max(0, Math.min(6500, mapX))
       const newY = Math.max(0, Math.min(3600, mapY))
       
-      // DIAGNOSTIC: Log every 10th move event to avoid spam
-      if (!onMove.counter) onMove.counter = 0
-      onMove.counter++
-      if (onMove.counter % 10 === 0) {
-        console.log('🟢 DRAG MOVE:', {
-          'Current Screen Pos': `(${moveClientX.toFixed(1)}, ${moveClientY.toFixed(1)})`,
-          'Current Map Pos': `(${newX.toFixed(1)}, ${newY.toFixed(1)})`,
-          'Scale': dragScale.toFixed(3),
-          'Desired Screen Pos': `(${desiredScreenX.toFixed(1)}, ${desiredScreenY.toFixed(1)})`
-        })
-      }
-      
       rumour.x = newX
       rumour.y = newY
 
@@ -107,15 +85,6 @@ export function useRumourDrag(mapTransform) {
      */
     const onEnd = (e) => {
       rumour.isDragging = false
-
-      // DIAGNOSTIC: Log drag end
-      const finalClientX = e.touches ? (e.changedTouches?.[0]?.clientX ?? 0) : e.clientX
-      const finalClientY = e.touches ? (e.changedTouches?.[0]?.clientY ?? 0) : e.clientY
-      console.log('🔴 DRAG END:', {
-        'Final Screen Pos': `(${finalClientX.toFixed(1)}, ${finalClientY.toFixed(1)})`,
-        'Final Map Pos': `(${rumour.x.toFixed(1)}, ${rumour.y.toFixed(1)})`,
-        'Scale': dragScale.toFixed(3)
-      })
 
       // Check if position changed
       if (rumour.x !== rumour.originalX || rumour.y !== rumour.originalY) {
