@@ -32,7 +32,8 @@
         :title="rumour.isPinned ? 'Click to unpin and drag' : 'Click to pin in place'"
         :disabled="isEditing"
       >
-        <span v-if="rumour.is_a_place">⌘</span>
+        <span v-if="rumour.is_a_place && rumour.isPinned" class="place-marker">⌘</span>
+        <span v-else-if="rumour.is_a_place && !rumour.isPinned">🔀</span>
         <span v-else-if="rumour.isPinned">📍</span>
         <span v-else>🔀</span>
       </button>
@@ -609,6 +610,10 @@ onBeforeUnmount(() => {
   line-height: 1;
   transition: transform 0.1s;
   flex-shrink: 0;
+}
+
+.place-marker {
+  color: white;
 }
 
 .rumour-marker.is-hovered .pin-button {

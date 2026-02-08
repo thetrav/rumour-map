@@ -60,7 +60,9 @@ All tests updated to include `is_a_place` field in mock data and assertions.
 Before: All rumours showed 📍 (pin) or 🔀 (unpinned)
 After: 
 - Regular rumours: 📍 (pinned) or 🔀 (unpinned)
-- Places: ⌘ (always shows command symbol)
+- Places: ⌘ (pinned, white color for contrast) or 🔀 (unpinned)
+
+**Note:** When unpinned, place markers use the same 🔀 icon as regular rumours to indicate draggable state.
 
 ### Form Controls
 Both AddRumourForm and RumourMarker edit mode now include:
