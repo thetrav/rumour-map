@@ -44,6 +44,7 @@ describe('Push Updates Integration', () => {
         x: 3000,
         y: 1500,
         title: 'Dragon Sighting',
+        is_a_place: false,
         rating: 8,
         resolved: false,
         details: 'Large winged creature seen',

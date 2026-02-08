@@ -98,7 +98,10 @@ describe('AddRumourForm', () => {
     await wrapper.find('#details').setValue('Test details')
     await wrapper.find('#session_date').setValue('2024-01-15')
     await wrapper.find('#rating').setValue('7')
-    await wrapper.find('.form-checkbox').setValue(true)
+    
+    // Find the resolved checkbox (second checkbox)
+    const checkboxes = wrapper.findAll('.form-checkbox')
+    await checkboxes[1].setValue(true)
 
     // Submit form
     await wrapper.find('form').trigger('submit.prevent')
@@ -111,6 +114,7 @@ describe('AddRumourForm', () => {
       details: 'Test details',
       session_date: '2024-01-15',
       rating: 7,
+      is_a_place: false,
       resolved: true
     })
   })
@@ -192,7 +196,25 @@ describe('AddRumourForm', () => {
       location_targetted: 'Castle',
       details: null,
       rating: null,
+      is_a_place: false,
       resolved: false
     })
+  })
+
+  it('handles is_a_place checkbox correctly', async () => {
+    const wrapper = mount(AddRumourForm, {
+      props: defaultProps
+    })
+
+    await wrapper.find('#title').setValue('Place Marker')
+    
+    // Find the is_a_place checkbox (first checkbox)
+    const checkboxes = wrapper.findAll('.form-checkbox')
+    await checkboxes[0].setValue(true)
+    
+    await wrapper.find('form').trigger('submit.prevent')
+    
+    const emittedData = wrapper.emitted('save')?.[0]?.[0]
+    expect(emittedData.is_a_place).toBe(true)
   })
 })
