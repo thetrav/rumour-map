@@ -128,25 +128,36 @@ export function useRumoursFromGoogle() {
     const xIdx = getColumnIndex(headers, 'x', 'x coordinate', 'x_coordinate')
     const yIdx = getColumnIndex(headers, 'y', 'y coordinate', 'y_coordinate')
 
-    // Skip rows with missing required fields (title, X, Y)
-    if (titleIdx === null || xIdx === null || yIdx === null) {
-      console.warn(`Cannot find required columns (title, X, Y) in header`)
+    // Skip rows with missing required fields (title column is required)
+    if (titleIdx === null) {
+      console.warn(`Cannot find required column (title) in header`)
       return null
     }
 
-    if (!row[titleIdx] || !row[xIdx] || !row[yIdx]) {
-      console.warn(`Skipping row ${index + 2}: missing required fields (title, X, or Y)`)
+    if (!row[titleIdx]) {
+      console.warn(`Skipping row ${index + 2}: missing required field (title)`)
       return null
     }
 
-    // Parse coordinates
-    const x = parseFloat(row[xIdx])
-    const y = parseFloat(row[yIdx])
+    // Parse coordinates - allow blank/undefined for auto-placement
+    let x = 0
+    let y = 0
+    let hasValidCoordinates = false
 
-    // Validate numeric coordinates
-    if (isNaN(x) || isNaN(y)) {
-      console.warn(`Skipping row ${index + 2}: invalid coordinates`)
-      return null
+    if (xIdx !== null && yIdx !== null && row[xIdx] && row[yIdx]) {
+      const parsedX = parseFloat(row[xIdx])
+      const parsedY = parseFloat(row[yIdx])
+      
+      if (!isNaN(parsedX) && !isNaN(parsedY)) {
+        x = parsedX
+        y = parsedY
+        hasValidCoordinates = true
+      }
+    }
+
+    // If no valid coordinates, log for potential auto-placement
+    if (!hasValidCoordinates) {
+      console.log(`Row ${index + 2}: no valid coordinates, will attempt auto-placement`)
     }
 
     // Clamp to map bounds (0-6500, 0-3600)
@@ -199,6 +210,56 @@ export function useRumoursFromGoogle() {
       isModified: false,          // No modifications yet
       modifiedFields: new Set(),  // Track which fields are modified
       originalValues: { ...rumourData } // Store original values for all editable fields
+    }
+  }
+
+  /**
+   * Auto-place rumours based on location_targetted
+   * If a rumour has x=0, y=0 (no coordinates) but has a location_targetted value,
+   * find another rumour with the same location_targetted that has defined coordinates
+   * and copy those coordinates
+   */
+  const autoPlaceRumours = (rumours: Rumour[]): void => {
+    const { markFieldAsModified } = useRumourUpdates()
+    
+    // Create a map of location_targetted to rumours with valid coordinates
+    const locationToCoordinates = new Map<string, { x: number; y: number }>()
+    
+    // First pass: collect all rumours with valid coordinates and location_targetted
+    rumours.forEach(rumour => {
+      if (rumour.location_targetted && 
+          (rumour.x !== 0 || rumour.y !== 0) && 
+          !locationToCoordinates.has(rumour.location_targetted)) {
+        locationToCoordinates.set(rumour.location_targetted, {
+          x: rumour.x,
+          y: rumour.y
+        })
+      }
+    })
+    
+    // Second pass: auto-place rumours with no coordinates but matching location_targetted
+    let autoPlacedCount = 0
+    rumours.forEach(rumour => {
+      // Check if rumour has no coordinates (0,0) but has a location_targetted
+      if ((rumour.x === 0 && rumour.y === 0) && rumour.location_targetted) {
+        const coordinates = locationToCoordinates.get(rumour.location_targetted)
+        if (coordinates) {
+          // Set the coordinates
+          rumour.x = coordinates.x
+          rumour.y = coordinates.y
+          
+          // Mark as modified so it gets saved
+          markFieldAsModified(rumour, 'x')
+          markFieldAsModified(rumour, 'y')
+          
+          autoPlacedCount++
+          console.log(`Auto-placed rumour ${rumour.id} at (${coordinates.x}, ${coordinates.y}) based on location_targetted: "${rumour.location_targetted}"`)
+        }
+      }
+    })
+    
+    if (autoPlacedCount > 0) {
+      console.log(`✅ Auto-placed ${autoPlacedCount} rumour${autoPlacedCount > 1 ? 's' : ''} based on location_targetted`)
     }
   }
 
@@ -287,6 +348,9 @@ export function useRumoursFromGoogle() {
       const parsedRumours = dataRows
         .map((row: string[], index: number) => parseSheetRow(row, index, headerMapping!))
         .filter((rumour: Rumour | null): rumour is Rumour => rumour !== null)
+
+      // Auto-place rumours based on location_targetted
+      autoPlaceRumours(parsedRumours)
 
       rumours.value = parsedRumours
       cachedData = parsedRumours
