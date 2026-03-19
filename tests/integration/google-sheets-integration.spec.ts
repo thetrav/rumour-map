@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { ref } from 'vue'
 import App from '@/App.vue'
 
 /**
@@ -29,21 +30,33 @@ vi.mock('@/composables/useRumoursFromGoogle', () => ({
   }))
 }))
 
+vi.mock('@/composables/useConfig', () => ({
+  useConfig: vi.fn(() => ({
+    mapImageUrl: ref(''),
+    spreadsheetId: ref(''),
+    isConfigured: ref(false),
+    needsSetup: ref(true),
+    setConfig: vi.fn()
+  }))
+}))
+
 describe('Google Sheets Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('shows authentication prompt when not authenticated', () => {
-    const wrapper = mount(App)
+  it('shows setup dialog when not authenticated', () => {
+    const wrapper = mount(App, { attachTo: document.body })
     
-    // Should show auth prompt
-    const authPrompt = wrapper.find('.auth-prompt')
-    expect(authPrompt.exists()).toBe(true)
+    // Should show setup dialog via teleport
+    const setupDialog = wrapper.findComponent({ name: 'SetupDialog' })
+    expect(setupDialog.exists()).toBe(true)
     
-    // Should contain welcome message
-    expect(wrapper.text()).toContain('Welcome to Rumour Map')
-    expect(wrapper.text()).toContain('Please sign in with Google')
+    // The dialog is teleported to body, so check the DOM directly
+    const mapUrlInput = document.body.querySelector('#mapUrl')
+    expect(mapUrlInput).not.toBeNull()
+    const spreadsheetInput = document.body.querySelector('#spreadsheetId')
+    expect(spreadsheetInput).not.toBeNull()
   })
 
   it('renders the app structure correctly', () => {
@@ -57,11 +70,10 @@ describe('Google Sheets Integration', () => {
     expect(wrapper.find('.main-content').exists()).toBe(true)
   })
 
-  it('shows GoogleAuthButton in header when not authenticated', () => {
+  it('shows setup button in header', () => {
     const wrapper = mount(App)
     
-    // Should have auth button in header
-    const headerAuthButton = wrapper.findAllComponents({ name: 'GoogleAuthButton' })
-    expect(headerAuthButton.length).toBeGreaterThan(0)
+    // Should have setup button in header
+    expect(wrapper.find('.btn-setup').exists()).toBe(true)
   })
 })

@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import PanZoomMap from "./components/PanZoomMap.vue";
-import GoogleAuthButton from "./components/GoogleAuthButton.vue";
 import PushUpdatesButton from "./components/PushUpdatesButton.vue";
 import AddRumourForm from "./components/AddRumourForm.vue";
+import SetupDialog from "./components/SetupDialog.vue";
 import { useRumours } from "./composables/useRumours";
 import { useRumourFilter } from "./composables/useRumourFilter";
 import { useAddRumour } from "./composables/useAddRumour";
 import { useAddRumourToSheets } from "./composables/useAddRumourToSheets";
+import { useConfig } from "./composables/useConfig";
 
 const { rumours, isLoading, error, isAuthenticated, loadRumours, refresh, getHeaderMapping } = useRumours();
+const { mapImageUrl, isConfigured } = useConfig();
 
 // Apply filtering to rumours
 const { filteredRumours, filterState, setFilter, filterMode, searchText, setSearchText } = useRumourFilter(rumours);
@@ -23,8 +25,21 @@ const visibleRumours = computed(() => {
 const { isAddMode, pendingCoordinates, showForm, startAddMode, captureCoordinates, cancelAdd, completeAdd } = useAddRumour();
 const { isAdding, addError, addRumour } = useAddRumourToSheets();
 
-const mapImageUrl =
-  "https://forum.sablewyvern.com/Image/the_savage_frontier_by_yora_player_map_v2.png";
+const needsSetup = computed(() => {
+  return !isAuthenticated.value || !isConfigured.value;
+});
+
+const showDialog = ref(false);
+
+watch(needsSetup, (newVal) => {
+  if (newVal) {
+    showDialog.value = true;
+  }
+});
+
+const updateShowDialog = (val: boolean) => {
+  showDialog.value = val;
+};
 
 // Handle map click in add mode
 const handleMapClick = (coords: { x: number; y: number }) => {
@@ -63,32 +78,17 @@ const handleCancelAdd = () => {
         <h1 class="Header-title">Rumour Map</h1>
       </div>
       <div class="Header-item">
-        <div>
-        <a href="privacy.html">Privacy Policy</a><br/>
-        <a href="tos.html">Terms of Service</a>
+        <button @click="showDialog = true" class="btn-setup" title="Setup">
+          ⚙️ Setup
+        </button>
+      </div>
+      <div class="Header-item">
+        <div class="legal-links">
+          <a href="privacy.html">Privacy Policy</a><br/>
+          <a href="tos.html">Terms of Service</a>
         </div>
       </div>
       <div class="Header-item Header-item--full"></div>
-
-      <!-- Authentication Status -->
-      <div v-if="!isAuthenticated" class="Header-item">
-        <GoogleAuthButton />
-      </div>
-
-      <!-- Loading State -->
-      <div v-else-if="isLoading" class="Header-item">
-        <span class="Label Label--primary">Loading rumours...</span>
-      </div>
-
-      <!-- Error State -->
-      <div v-else-if="error" class="Header-item error">
-        <span class="Label Label--danger">{{ error }}</span>
-      </div>
-
-      <!-- Empty State -->
-      <div v-else-if="rumours.length === 0" class="Header-item">
-        <span class="Label Label--secondary">No rumours available</span>
-      </div>
 
       <!-- Filter Controls (when authenticated and have rumours) -->
       <div v-if="isAuthenticated && rumours.length > 0" class="Header-item filter-controls">
@@ -152,25 +152,11 @@ const handleCancelAdd = () => {
           {{ isLoading ? 'Refreshing...' : 'Refresh' }}
         </button>
       </div>
-
-      <div v-if="isAuthenticated" class="Header-item">
-        <GoogleAuthButton />
-      </div>
-
-      <div class="Header-item">
-        <span class="Label">High Resolution Map Viewer</span>
-      </div>
     </header>
 
     <main class="main-content">
-      <!-- Show authentication prompt if not authenticated -->
-      <div v-if="!isAuthenticated" class="auth-prompt">
-        <div class="auth-prompt-content">
-          <h2>Welcome to Rumour Map</h2>
-          <p>Please sign in with Google to view rumours from Google Sheets</p>
-          <GoogleAuthButton />
-        </div>
-      </div>
+      <!-- Show setup dialog if not authenticated -->
+      <SetupDialog v-if="!isAuthenticated" :show="true" />
 
       <!-- Show map when authenticated -->
       <PanZoomMap 
@@ -193,6 +179,12 @@ const handleCancelAdd = () => {
         @cancel="handleCancelAdd"
       />
     </main>
+
+    <SetupDialog
+      :show="showDialog"
+      @update:show="updateShowDialog"
+      @saved="loadRumours"
+    />
   </div>
 </template>
 
@@ -221,6 +213,22 @@ const handleCancelAdd = () => {
   color: #c9d1d9;
 }
 
+.btn-setup {
+  background-color: #21262d;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-setup:hover {
+  background-color: #30363d;
+  border-color: #484f58;
+}
+
 .Header-item {
   display: flex;
   align-items: center;
@@ -234,33 +242,6 @@ const handleCancelAdd = () => {
   flex: 1;
   overflow: hidden;
   position: relative;
-}
-
-.auth-prompt {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  background-color: #0d1117;
-}
-
-.auth-prompt-content {
-  text-align: center;
-  padding: 2rem;
-  max-width: 500px;
-}
-
-.auth-prompt-content h2 {
-  color: #c9d1d9;
-  font-size: 1.75rem;
-  margin-bottom: 1rem;
-}
-
-.auth-prompt-content p {
-  color: #8b949e;
-  font-size: 1rem;
-  margin-bottom: 2rem;
 }
 
 .btn-refresh {
@@ -422,5 +403,10 @@ const handleCancelAdd = () => {
 
 .search-clear:hover {
   color: #c9d1d9;
+}
+
+.legal-links a {
+  color: #c9d1d9;
+  text-decoration: underline;
 }
 </style>
